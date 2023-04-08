@@ -1,0 +1,107 @@
+[
+  
+    {
+      "title"    : "Account Takeover via manipulating Session Storage",
+      "description" : "Taking over other user account via manipulating the local session Storage.",
+      "tags"     : "Session Storage, Account Takeover, Misconfiguration",
+      "url"      : "/Account_Takeover-via-session-storage/",
+      "date"     : "2023-04-01 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "Hacking MNC&#39;s Content Management System due to misconfiguration and lack of authorization",
+      "description" : "Hacking MNC&#39;s Content Management System due to misconfiguration and lack of authorization in the application.",
+      "tags"     : "Reading Js files, Privilege Escalation, Fuzzing, Misconfiguration",
+      "url"      : "/Hacking_MNCs-CMS_Systems/",
+      "date"     : "2023-03-25 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "Reverse Engineering Client side Encryption",
+      "description" : "Reverse Engineering client side Encryption",
+      "tags"     : "Reverse Engineering",
+      "url"      : "/reversing-client-side-encryption/",
+      "date"     : "2023-02-18 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "DLL Injection on one of the biggest Business Automation application",
+      "description" : "Remote Code Execution via DLL Hijacking on a top 5 business automation product.",
+      "tags"     : "DLL Hijacking, RCE, Product Security",
+      "url"      : "/RCE-DLL-Hijacking/",
+      "date"     : "2022-12-15 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "IDOR leads to Takeover other user&#39;s linked bank accounts",
+      "description" : "IDOR leads to Takeover other user&#39;s bank accounts.",
+      "tags"     : "Account Takeover, Broken Access Control, IDOR",
+      "url"      : "/IDOR/",
+      "date"     : "2022-08-10 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "API Security Misconfiguration Leads to tons of PII data Leakage",
+      "description" : "API Security Misconfiguration Leads to tons of PII data Leakage.",
+      "tags"     : "PII Leak, Misconfiguration",
+      "url"      : "/PII-Leak/",
+      "date"     : "2021-07-01 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "Insecure Deserialization",
+      "description" : "A pentester’s guide to insecure deserialization.",
+      "tags"     : "Deserialization, Misconfiguration",
+      "url"      : "/Insecure_Deserialization/",
+      "date"     : "2021-06-09 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "Time-Based SQL Injection to Dumping the Database",
+      "description" : "Time-Based SQL Injection to Dumping the Database.",
+      "tags"     : "SQL Injection, Misconfiguration",
+      "url"      : "/Sql-injection/",
+      "date"     : "2021-05-19 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "Massive Subdomains Take Over",
+      "description" : "Massive Subdomains Take Over.",
+      "tags"     : "Subdomain Takeover, Misconfiguration",
+      "url"      : "/massive_subdomain-takeover/",
+      "date"     : "2021-05-08 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "RCE via File Upload",
+      "description" : "Remote Code Execution Due to Unrestricted File Upload.",
+      "tags"     : "Remote Code Execution, Misconfiguration",
+      "url"      : "/RCE-via-fileupload/",
+      "date"     : "2021-04-07 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "RCE via File Upload",
+      "description" : "Remote Code Execution Due to Unrestricted File Upload.",
+      "tags"     : "Remote Code Execution, Misconfiguration",
+      "url"      : "/RCE_via_file_upload/",
+      "date"     : "2021-03-05 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "RCE via File Upload",
+      "description" : "Remote Code Execution Due to Unrestricted File Upload.",
+      "tags"     : "Remote Code Execution, Misconfiguration",
+      "url"      : "/RCE_via_file_upload/",
+      "date"     : "2021-02-14 12:00:00 +0000"
+    } ,
+  
+    {
+      "title"    : "Reflected XSS on a Public Program",
+      "description" : "Reflected XSS on a Public Program.",
+      "tags"     : "XSS, Misconfiguration",
+      "url"      : "/xss_on_public_program/",
+      "date"     : "2021-02-08 12:00:00 +0000"
+    } 
+  
+]
