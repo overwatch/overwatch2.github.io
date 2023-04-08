@@ -1,0 +1,54 @@
+<footer class="footer">
+  <a class="footer_item" href="https://github.com/thevillagehacker/">
+    <img align="center" alt="Naveen's GitHub" width="30px" src="https://img.icons8.com/color/github.png"/></a>
+  <a class="footer_item" href="https://www.linkedin.com/in/thevillagehacker/">
+    <img align="center" alt="Naveen's LinkedIn" width="30px" src="https://img.icons8.com/color/linkedin.png"/>
+  </a>
+  <a class="footer_item" href="mailto:nvnj1998@gmail.com">
+  <img align="center" alt="Naveen's E-Mail" width="30px" src="https://img.icons8.com/color/gmail.png" />
+  </a>
+  <a class="footer_item" href="https://twitter.com/thevillagehackr">
+  <img align="center" alt="Naveen's twitter" width="30px" src="https://img.icons8.com/color/twitter.png" />
+  </a><br>
+  <span class="footer_item">&copy; {{ site.time | date: "%Y" }}</span>
+  <small class="footer_copyright">
+    <!-- Klisé Theme: https://github.com/piharpi/jekyll-klise -->
+    <a
+      href="https://github.com/piharpi/jekyll-klise"
+      target="_blank"
+      rel="noreferrer noopener"
+      >klisé</a
+    >
+    theme on
+    <a href="https://jekyllrb.com" target="_blank" rel="noreferrer noopener"
+      >jekyll</a
+    >
+  </small>
+</footer>
+<script src="/assets/js/main.js" defer="defer"></script>
+{%- if site.google_analytics -%}
+  <!-- Google tag (gtag.js) -->
+  <script
+  async
+  src="https://www.googletagmanager.com/gtag/js?id={{ site.google_analytics }}"
+  ></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "{{ site.google_analytics }}");
+  </script>
+{%- endif -%}
+{%- if page.url == '/blog/' -%}
+  <script src="/assets/js/search.min.js"></script>
+  <script>
+    var sjs = SimpleJekyllSearch({
+      searchInput: document.getElementById('search-input'),
+      resultsContainer: document.getElementById('search-results'),
+      json: '/assets/search.json',
+    });
+  </script>
+{%- endif -%}
