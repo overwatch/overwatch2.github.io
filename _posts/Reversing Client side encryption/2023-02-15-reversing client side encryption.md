@@ -76,6 +76,8 @@ Let's load the application in the browser and check the encryption in the REST A
 <img src="reqandresp.png">
 <figcaption>Fig 1. Request and response</figcaption>
 </figure>
+<figure>
+
 
 Alright! let's check the JS source files in the CDN subdomain `cdnPath: 'https://cdn.abc.com'`. The subdomain has lots of files but there was only one file which is different than the other files ***app.js***. The app.js file contains the below details which we need for our further exploitation.
 
